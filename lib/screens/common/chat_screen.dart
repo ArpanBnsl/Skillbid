@@ -66,10 +66,10 @@ class ChatScreen extends ConsumerWidget {
                 final otherParticipant = chat.otherUserName.trim().isEmpty
                     ? 'Participant'
                     : chat.otherUserName;
-                final title = '$projectTitle | $otherParticipant';
+                final title = projectTitle;
                 final subtitle = chat.lastMessage?.trim().isNotEmpty == true
                     ? chat.lastMessage!
-                    : (chat.jobTitle ?? 'Project chat');
+                  : (chat.isClosed ? 'Conversation closed' : 'No messages yet');
 
                 return ListTile(
                   isThreeLine: true,
@@ -77,7 +77,10 @@ class ChatScreen extends ConsumerWidget {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (_) => ChatDetailScreen(chatId: chat.chatId),
+                        builder: (_) => ChatDetailScreen(
+                          chatId: chat.chatId,
+                          initialTitle: title,
+                        ),
                       ),
                     );
                   },
@@ -86,8 +89,8 @@ class ChatScreen extends ConsumerWidget {
                   ),
                   title: Text(
                     title,
-                    maxLines: 2,
-                    overflow: TextOverflow.fade,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                   subtitle: Row(
                     children: [
@@ -97,7 +100,7 @@ class ChatScreen extends ConsumerWidget {
                       ],
                       Expanded(
                         child: Text(
-                          subtitle,
+                          '$otherParticipant • $subtitle',
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
@@ -107,7 +110,7 @@ class ChatScreen extends ConsumerWidget {
                   trailing: chat.lastMessageAt == null
                       ? null
                       : Text(
-                          Formatters.formatTimeAgo(chat.lastMessageAt!),
+                          Formatters.formatChatTimestamp(chat.lastMessageAt!),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                 );

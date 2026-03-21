@@ -4,17 +4,17 @@ import 'package:intl/intl.dart';
 class Formatters {
   /// Format date as "MMM dd, yyyy"
   static String formatDate(DateTime date) {
-    return DateFormat('MMM dd, yyyy').format(date);
+    return DateFormat('MMM dd, yyyy').format(date.toLocal());
   }
 
   /// Format date and time as "MMM dd, yyyy hh:mm a"
   static String formatDateTime(DateTime dateTime) {
-    return DateFormat('MMM dd, yyyy hh:mm a').format(dateTime);
+    return DateFormat('MMM dd, yyyy hh:mm a').format(dateTime.toLocal());
   }
 
   /// Format time as "hh:mm a"
   static String formatTime(DateTime dateTime) {
-    return DateFormat('hh:mm a').format(dateTime);
+    return DateFormat('hh:mm a').format(dateTime.toLocal());
   }
 
   /// Format currency with symbol
@@ -30,7 +30,7 @@ class Formatters {
   /// Format time difference (e.g., "2 hours ago")
   static String formatTimeAgo(DateTime dateTime) {
     final now = DateTime.now();
-    final diff = now.difference(dateTime);
+    final diff = now.difference(dateTime.toLocal());
 
     if (diff.inSeconds < 60) {
       return 'now';
@@ -43,6 +43,17 @@ class Formatters {
     } else {
       return formatDate(dateTime);
     }
+  }
+
+  /// Context-aware timestamp for chat list items.
+  static String formatChatTimestamp(DateTime dateTime) {
+    final local = dateTime.toLocal();
+    final now = DateTime.now();
+    final sameDay = now.year == local.year && now.month == local.month && now.day == local.day;
+    if (sameDay) {
+      return formatTime(local);
+    }
+    return DateFormat('dd MMM').format(local);
   }
 
   /// Format number with commas (e.g., "1,234")

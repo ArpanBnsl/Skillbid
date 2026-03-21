@@ -10,8 +10,9 @@ import 'profile_screen.dart';
 class ClientShell extends ConsumerStatefulWidget {
   final int initialIndex;
   final String? initialChatId;
+  final String? initialChatTitle;
 
-  const ClientShell({super.key, this.initialIndex = 0, this.initialChatId});
+  const ClientShell({super.key, this.initialIndex = 0, this.initialChatId, this.initialChatTitle});
 
   @override
   ConsumerState<ClientShell> createState() => _ClientShellState();
@@ -30,7 +31,10 @@ class _ClientShellState extends ConsumerState<ClientShell> {
         if (!mounted) return;
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => ChatDetailScreen(chatId: widget.initialChatId!),
+            builder: (_) => ChatDetailScreen(
+              chatId: widget.initialChatId!,
+              initialTitle: widget.initialChatTitle,
+            ),
           ),
         );
       });

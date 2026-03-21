@@ -34,6 +34,17 @@ class ClientProfileScreen extends ConsumerWidget {
           final postedCount = jobsAsync.valueOrNull?.length ?? 0;
           final contractCount = contractsAsync.valueOrNull?.length ?? 0;
           final completedCount = contractsAsync.valueOrNull?.where((c) => c.status == 'completed').length ?? 0;
+          final pastJobs = (jobsAsync.valueOrNull ?? const [])
+              .where((j) => j.status == 'completed' || j.status == 'cancelled' || j.status == 'deleted')
+              .toList();
+          final pastContracts = (contractsAsync.valueOrNull ?? const [])
+              .where((c) => c.status == 'completed' || c.status == 'terminated')
+              .toList();
+          final pastContractJobIds = pastContracts.map((c) => c.jobId).toSet();
+          final jobsById = {
+            for (final job in (jobsAsync.valueOrNull ?? const [])) job.id: job,
+          };
+          final dedupPastJobs = pastJobs.where((j) => !pastContractJobIds.contains(j.id)).toList();
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -78,11 +89,97 @@ class ClientProfileScreen extends ConsumerWidget {
                       _statRow('Posted Projects', '$postedCount'),
                       _statRow('Contracts', '$contractCount'),
                       _statRow('Completed', '$completedCount'),
+                      if (profile.averageRating != null)
+                        _statRow('Your Rating', '${profile.averageRating!.toStringAsFixed(1)}/5'),
+                      _statRow('Immediate Requests Left', '${profile.immReqCnt}'),
                       _statRow('Member Since', Formatters.formatDate(profile.createdAt)),
+                      const SizedBox(height: 4),
+                      const Align(
+                        alignment: Alignment.centerLeft,
+                        child: Text(
+                          'Immediate requests are urgent jobs broadcast quickly to nearby providers.',
+                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ),
+              const SizedBox(height: 16),
+              Text('Past Projects', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              if (pastContracts.isEmpty && pastJobs.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(14),
+                    child: Text('No past projects yet.'),
+                  ),
+                )
+              else ...[
+                ...pastContracts.map((contract) {
+                  final relatedJob = jobsById[contract.jobId];
+                  final title = relatedJob?.title ?? 'Project ${contract.jobId.substring(0, 8)}';
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ExpansionTile(
+                      leading: const Icon(Icons.handshake_outlined),
+                      title: Text(title),
+                      subtitle: Text('Contract • ${_statusLabel(contract.status)}'),
+                      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      children: [
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('Started: ${Formatters.formatDate(contract.startDate ?? contract.createdAt)}'),
+                        ),
+                        const SizedBox(height: 4),
+                        Align(
+                          alignment: Alignment.centerLeft,
+                          child: Text('Ended: ${Formatters.formatDate(contract.endDate ?? contract.updatedAt)}'),
+                        ),
+                        if (contract.terminatedBy != null) ...[
+                          const SizedBox(height: 4),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('Terminated by: ${contract.terminatedBy}'),
+                          ),
+                        ],
+                        if (contract.providerRating != null) ...[
+                          const SizedBox(height: 4),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('Provider rating: ${contract.providerRating}/5'),
+                          ),
+                        ],
+                        if (contract.clientRating != null) ...[
+                          const SizedBox(height: 4),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('Your rating from provider: ${contract.clientRating}/5'),
+                          ),
+                        ],
+                        if (contract.reviewText?.trim().isNotEmpty == true) ...[
+                          const SizedBox(height: 4),
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text('Review: ${contract.reviewText}'),
+                          ),
+                        ],
+                      ],
+                    ),
+                  );
+                }),
+                ...dedupPastJobs.map((job) {
+                  return Card(
+                    margin: const EdgeInsets.only(bottom: 10),
+                    child: ListTile(
+                      leading: const Icon(Icons.assignment_outlined),
+                      title: Text(job.title),
+                      subtitle: Text('Job • ${_statusLabel(job.status)}'),
+                      trailing: Text(Formatters.formatDate(job.updatedAt)),
+                    ),
+                  );
+                }),
+              ],
               const SizedBox(height: 20),
               OutlinedButton.icon(
                 onPressed: () async {
@@ -120,6 +217,16 @@ class ClientProfileScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  String _statusLabel(String status) {
+    return switch (status) {
+      'completed' => 'Completed',
+      'cancelled' => 'Cancelled',
+      'terminated' => 'Terminated',
+      'deleted' => 'Deleted',
+      _ => status,
+    };
   }
 
   String _initials(String name) {

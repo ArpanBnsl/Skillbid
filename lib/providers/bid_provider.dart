@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/app_constants.dart';
 import '../models/bid_model.dart';
 import '../repositories/bid_repository.dart';
 import 'auth_provider.dart';
@@ -12,6 +13,18 @@ final providerBidsProvider = FutureProvider<List<BidModel>>((ref) async {
   
   final repo = ref.watch(bidRepositoryProvider);
   return repo.getProviderBids(userId);
+});
+
+final providerPendingBidsProvider = FutureProvider<List<BidModel>>((ref) async {
+  final bids = await ref.watch(providerBidsProvider.future);
+  return bids.where((b) => b.status == AppConstants.bidStatusPending).toList();
+});
+
+final providerPastBidsProvider = FutureProvider<List<BidModel>>((ref) async {
+  final bids = await ref.watch(providerBidsProvider.future);
+  return bids
+      .where((b) => b.status == AppConstants.bidStatusRejected || b.status == AppConstants.bidStatusCancelled)
+      .toList();
 });
 
 /// Get bids for a specific job
@@ -54,6 +67,8 @@ final acceptBidProvider = FutureProvider.family<void, String>((ref, bidId) async
   
   // Refresh bids
   ref.invalidate(providerBidsProvider);
+  ref.invalidate(providerPendingBidsProvider);
+  ref.invalidate(providerPastBidsProvider);
   ref.invalidate(bidProvider(bidId));
 });
 
@@ -64,6 +79,8 @@ final rejectBidProvider = FutureProvider.family<void, String>((ref, bidId) async
   
   // Refresh bids
   ref.invalidate(providerBidsProvider);
+  ref.invalidate(providerPendingBidsProvider);
+  ref.invalidate(providerPastBidsProvider);
   ref.invalidate(bidProvider(bidId));
 });
 
@@ -74,6 +91,8 @@ final withdrawBidProvider = FutureProvider.family<void, String>((ref, bidId) asy
   
   // Refresh bids
   ref.invalidate(providerBidsProvider);
+  ref.invalidate(providerPendingBidsProvider);
+  ref.invalidate(providerPastBidsProvider);
   ref.invalidate(bidProvider(bidId));
 });
 

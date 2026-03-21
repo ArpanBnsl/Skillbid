@@ -31,6 +31,10 @@ mixin _$JobModel {
   int? get desiredCompletionDays => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
   bool get isDeleted => throw _privateConstructorUsedError;
+  bool get isImmediate => throw _privateConstructorUsedError;
+  DateTime? get expiresAt => throw _privateConstructorUsedError;
+  double? get jobLat => throw _privateConstructorUsedError;
+  double? get jobLng => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
 
@@ -60,6 +64,10 @@ abstract class $JobModelCopyWith<$Res> {
     int? desiredCompletionDays,
     String status,
     bool isDeleted,
+    bool isImmediate,
+    DateTime? expiresAt,
+    double? jobLat,
+    double? jobLng,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -90,6 +98,10 @@ class _$JobModelCopyWithImpl<$Res, $Val extends JobModel>
     Object? desiredCompletionDays = freezed,
     Object? status = null,
     Object? isDeleted = null,
+    Object? isImmediate = null,
+    Object? expiresAt = freezed,
+    Object? jobLat = freezed,
+    Object? jobLng = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -135,6 +147,22 @@ class _$JobModelCopyWithImpl<$Res, $Val extends JobModel>
                 ? _value.isDeleted
                 : isDeleted // ignore: cast_nullable_to_non_nullable
                       as bool,
+            isImmediate: null == isImmediate
+                ? _value.isImmediate
+                : isImmediate // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            expiresAt: freezed == expiresAt
+                ? _value.expiresAt
+                : expiresAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
+            jobLat: freezed == jobLat
+                ? _value.jobLat
+                : jobLat // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            jobLng: freezed == jobLng
+                ? _value.jobLng
+                : jobLng // ignore: cast_nullable_to_non_nullable
+                      as double?,
             createdAt: null == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -169,6 +197,10 @@ abstract class _$$JobModelImplCopyWith<$Res>
     int? desiredCompletionDays,
     String status,
     bool isDeleted,
+    bool isImmediate,
+    DateTime? expiresAt,
+    double? jobLat,
+    double? jobLng,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -198,6 +230,10 @@ class __$$JobModelImplCopyWithImpl<$Res>
     Object? desiredCompletionDays = freezed,
     Object? status = null,
     Object? isDeleted = null,
+    Object? isImmediate = null,
+    Object? expiresAt = freezed,
+    Object? jobLat = freezed,
+    Object? jobLng = freezed,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -243,6 +279,22 @@ class __$$JobModelImplCopyWithImpl<$Res>
             ? _value.isDeleted
             : isDeleted // ignore: cast_nullable_to_non_nullable
                   as bool,
+        isImmediate: null == isImmediate
+            ? _value.isImmediate
+            : isImmediate // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        expiresAt: freezed == expiresAt
+            ? _value.expiresAt
+            : expiresAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
+        jobLat: freezed == jobLat
+            ? _value.jobLat
+            : jobLat // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        jobLng: freezed == jobLng
+            ? _value.jobLng
+            : jobLng // ignore: cast_nullable_to_non_nullable
+                  as double?,
         createdAt: null == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -270,6 +322,10 @@ class _$JobModelImpl implements _JobModel {
     this.desiredCompletionDays,
     this.status = 'open',
     this.isDeleted = false,
+    this.isImmediate = false,
+    this.expiresAt,
+    this.jobLat,
+    this.jobLng,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -300,13 +356,22 @@ class _$JobModelImpl implements _JobModel {
   @JsonKey()
   final bool isDeleted;
   @override
+  @JsonKey()
+  final bool isImmediate;
+  @override
+  final DateTime? expiresAt;
+  @override
+  final double? jobLat;
+  @override
+  final double? jobLng;
+  @override
   final DateTime createdAt;
   @override
   final DateTime updatedAt;
 
   @override
   String toString() {
-    return 'JobModel(id: $id, clientId: $clientId, title: $title, description: $description, budget: $budget, location: $location, skillId: $skillId, desiredCompletionDays: $desiredCompletionDays, status: $status, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'JobModel(id: $id, clientId: $clientId, title: $title, description: $description, budget: $budget, location: $location, skillId: $skillId, desiredCompletionDays: $desiredCompletionDays, status: $status, isDeleted: $isDeleted, isImmediate: $isImmediate, expiresAt: $expiresAt, jobLat: $jobLat, jobLng: $jobLng, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -329,6 +394,12 @@ class _$JobModelImpl implements _JobModel {
             (identical(other.status, status) || other.status == status) &&
             (identical(other.isDeleted, isDeleted) ||
                 other.isDeleted == isDeleted) &&
+            (identical(other.isImmediate, isImmediate) ||
+                other.isImmediate == isImmediate) &&
+            (identical(other.expiresAt, expiresAt) ||
+                other.expiresAt == expiresAt) &&
+            (identical(other.jobLat, jobLat) || other.jobLat == jobLat) &&
+            (identical(other.jobLng, jobLng) || other.jobLng == jobLng) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -349,6 +420,10 @@ class _$JobModelImpl implements _JobModel {
     desiredCompletionDays,
     status,
     isDeleted,
+    isImmediate,
+    expiresAt,
+    jobLat,
+    jobLng,
     createdAt,
     updatedAt,
   );
@@ -379,6 +454,10 @@ abstract class _JobModel implements JobModel {
     final int? desiredCompletionDays,
     final String status,
     final bool isDeleted,
+    final bool isImmediate,
+    final DateTime? expiresAt,
+    final double? jobLat,
+    final double? jobLng,
     required final DateTime createdAt,
     required final DateTime updatedAt,
   }) = _$JobModelImpl;
@@ -406,6 +485,14 @@ abstract class _JobModel implements JobModel {
   String get status;
   @override
   bool get isDeleted;
+  @override
+  bool get isImmediate;
+  @override
+  DateTime? get expiresAt;
+  @override
+  double? get jobLat;
+  @override
+  double? get jobLng;
   @override
   DateTime get createdAt;
   @override

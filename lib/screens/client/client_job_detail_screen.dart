@@ -1,11 +1,15 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../config/supabase_config.dart';
 import '../../models/job/job_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/bid_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../providers/user_provider.dart' as userp;
+import '../../services/realtime_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/empty_state_widget.dart';
 import '../../widgets/common/image_viewer.dart';
@@ -13,13 +17,58 @@ import '../../widgets/common/loading_widget.dart';
 import 'client_contract_detail_screen.dart';
 import '../../providers/job_provider.dart';
 
-class ClientJobDetailScreen extends ConsumerWidget {
+class ClientJobDetailScreen extends ConsumerStatefulWidget {
   final JobModel job;
 
   const ClientJobDetailScreen({super.key, required this.job});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<ClientJobDetailScreen> createState() => _ClientJobDetailScreenState();
+}
+
+class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
+  Timer? _countdownTimer;
+  Duration _remaining = Duration.zero;
+  late final RealtimeService _realtimeService;
+  dynamic _bidChannel;
+
+  JobModel get job => widget.job;
+
+  @override
+  void initState() {
+    super.initState();
+    _realtimeService = RealtimeService();
+
+    if (job.isImmediate && job.expiresAt != null) {
+      _updateRemaining();
+      _countdownTimer = Timer.periodic(const Duration(seconds: 1), (_) => _updateRemaining());
+    }
+
+    if (job.isImmediate && job.status == 'open') {
+      _bidChannel = _realtimeService.subscribeToBids(
+        job.id,
+        onChange: (_) => ref.invalidate(jobBidsProvider(job.id)),
+      );
+    }
+  }
+
+  void _updateRemaining() {
+    final diff = job.expiresAt!.difference(DateTime.now());
+    if (!mounted) return;
+    setState(() => _remaining = diff.isNegative ? Duration.zero : diff);
+  }
+
+  @override
+  void dispose() {
+    _countdownTimer?.cancel();
+    if (_bidChannel != null) {
+      supabase.removeChannel(_bidChannel);
+    }
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final bidsAsync = ref.watch(jobBidsProvider(job.id));
     final contractAsync = ref.watch(contractByJobProvider(job.id));
     final imagesAsync = ref.watch(jobImagesProvider(job.id));
@@ -30,7 +79,9 @@ class ClientJobDetailScreen extends ConsumerWidget {
         actions: [
           IconButton(
             tooltip: 'Delete job',
-            onPressed: () => _deleteJob(context, ref),
+            onPressed: (job.status == 'open' && contractAsync.valueOrNull == null)
+                ? () => _deleteJob(context, ref)
+                : null,
             icon: const Icon(Icons.delete_outline),
           ),
         ],
@@ -49,6 +100,10 @@ class ClientJobDetailScreen extends ConsumerWidget {
           padding: const EdgeInsets.all(16),
           children: [
             _jobCard(job, imagesAsync),
+            if (job.isImmediate) ...[
+              const SizedBox(height: 10),
+              _immediateInfoCard(),
+            ],
             const SizedBox(height: 14),
             contractAsync.when(
               loading: () => const SizedBox.shrink(),
@@ -148,14 +203,10 @@ class ClientJobDetailScreen extends ConsumerWidget {
                                   runSpacing: 8,
                                   children: [
                                     FilledButton(
-                                      onPressed: isAcceptedContract
+                                      onPressed: (bid.status != 'pending' || isAcceptedContract)
                                           ? null
                                           : () => _acceptBid(context, ref, bid.id, bid.providerId),
                                       child: Text(isAcceptedContract ? 'Accepted' : 'Accept'),
-                                    ),
-                                    OutlinedButton(
-                                      onPressed: () => _rejectBid(context, ref, bid.id),
-                                      child: const Text('Reject'),
                                     ),
                                   ],
                                 ),
@@ -181,6 +232,7 @@ class ClientJobDetailScreen extends ConsumerWidget {
       'in_progress' => 'In Progress',
       'completed' => 'Completed',
       'cancelled' => 'Cancelled',
+      'deleted' => 'Deleted',
       _ => job.status,
     };
 
@@ -207,7 +259,37 @@ class ClientJobDetailScreen extends ConsumerWidget {
                     style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 24),
                   ),
                 ),
-                _JobStatusPill(label: uiStatus),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _JobStatusPill(label: uiStatus),
+                    if (job.isImmediate) ...[
+                      const SizedBox(height: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.shade100,
+                          borderRadius: BorderRadius.circular(999),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.bolt, size: 14, color: Colors.orange.shade800),
+                            const SizedBox(width: 4),
+                            Text(
+                              'Immediate',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.w700,
+                                color: Colors.orange.shade800,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
             const SizedBox(height: 12),
@@ -267,6 +349,51 @@ class ClientJobDetailScreen extends ConsumerWidget {
     );
   }
 
+  Widget _immediateInfoCard() {
+    final expired = _remaining == Duration.zero && job.expiresAt != null;
+    final hours = _remaining.inHours;
+    final minutes = _remaining.inMinutes.remainder(60);
+    final seconds = _remaining.inSeconds.remainder(60);
+    final timeText = expired
+        ? 'Expired'
+        : '${hours}h ${minutes}m ${seconds}s remaining';
+
+    return Card(
+      color: expired ? Colors.red.shade50 : Colors.orange.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Row(
+          children: [
+            Icon(
+              expired ? Icons.timer_off_outlined : Icons.bolt,
+              color: expired ? Colors.red : Colors.orange.shade800,
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Immediate Service',
+                    style: TextStyle(fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    timeText,
+                    style: TextStyle(
+                      color: expired ? Colors.red : Colors.orange.shade900,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Future<void> _acceptBid(BuildContext context, WidgetRef ref, String bidId, String providerId) async {
     final clientId = ref.read(currentUserIdProvider);
     if (clientId == null) return;
@@ -289,22 +416,6 @@ class ClientJobDetailScreen extends ConsumerWidget {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to accept bid: $e')),
-      );
-    }
-  }
-
-  Future<void> _rejectBid(BuildContext context, WidgetRef ref, String bidId) async {
-    try {
-      await ref.read(rejectBidProvider(bidId).future);
-      ref.invalidate(jobBidsProvider(job.id));
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Bid rejected.')),
-      );
-    } catch (e) {
-      if (!context.mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to reject bid: $e')),
       );
     }
   }
@@ -362,7 +473,7 @@ class _BidderProfileSheet extends ConsumerWidget {
     final ratingAsync = ref.watch(providerAverageRatingProvider(providerId));
     final portfolioAsync = ref.watch(providerPortfolioByUserProvider(providerId));
     final skillIdsAsync = ref.watch(userp.providerSkillIdsProvider(providerId));
-    final contractsAsync = ref.watch(providerContractsProvider);
+    final contractsAsync = ref.watch(providerContractsByUserProvider(providerId));
 
     return Scaffold(
       backgroundColor: const Color(0xFFF7FAFA),
@@ -377,9 +488,10 @@ class _BidderProfileSheet extends ConsumerWidget {
 
           final providerProfile = providerProfileAsync.valueOrNull;
           final rating = ratingAsync.valueOrNull;
-          final completedCount = contractsAsync.valueOrNull
-              ?.where((c) => c.providerId == providerId && c.status == 'completed')
-              .length ?? 0;
+            final completedContracts = (contractsAsync.valueOrNull ?? const [])
+              .where((c) => c.status == 'completed')
+              .toList();
+            final completedCount = completedContracts.length;
 
           return ListView(
             padding: const EdgeInsets.all(16),
@@ -419,6 +531,7 @@ class _BidderProfileSheet extends ConsumerWidget {
                       if (rating != null) ...[
                         _row('Average Rating', '${rating.toStringAsFixed(1)}/5'),
                       ],
+                      _row('Reliability Score', '${(providerProfile?.relScore ?? 5.0).toStringAsFixed(1)}/10'),
                       _row('Experience', '${providerProfile?.experienceYears ?? 0} years'),
                       _row('Hourly Rate', Formatters.formatCurrencyShort(providerProfile?.hourlyRate ?? 0)),
                       _row('Completed Projects', '$completedCount'),
@@ -465,6 +578,43 @@ class _BidderProfileSheet extends ConsumerWidget {
                   );
                 },
               ),
+              const SizedBox(height: 12),
+              Text('Completed Contracts', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 8),
+              if (completedContracts.isEmpty)
+                const Card(
+                  child: Padding(
+                    padding: EdgeInsets.all(14),
+                    child: Text('No completed contracts yet.'),
+                  ),
+                )
+              else
+                Column(
+                  children: completedContracts.map((contract) {
+                    final jobAsync = ref.watch(jobProvider(contract.jobId));
+                    final title = jobAsync.valueOrNull?.title ?? 'Project ${contract.jobId.substring(0, 8)}';
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 10),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
+                            if (contract.providerRating != null) ...[
+                              const SizedBox(height: 4),
+                              Text('Client Rating: ${contract.providerRating}/5'),
+                            ],
+                            if (contract.reviewText?.trim().isNotEmpty == true) ...[
+                              const SizedBox(height: 4),
+                              Text('Review: ${contract.reviewText}'),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }).toList(),
+                ),
               const SizedBox(height: 12),
               Text('Past Works', style: Theme.of(context).textTheme.titleMedium),
               const SizedBox(height: 8),

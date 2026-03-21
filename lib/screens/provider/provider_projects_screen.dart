@@ -19,8 +19,6 @@ class ProviderProjectsScreen extends ConsumerStatefulWidget {
 
 class _ProviderProjectsScreenState extends ConsumerState<ProviderProjectsScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  String _bidStatusFilter = 'all';
-  String _contractStatusFilter = 'all';
 
   @override
   void initState() {
@@ -36,8 +34,8 @@ class _ProviderProjectsScreenState extends ConsumerState<ProviderProjectsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final bidsAsync = ref.watch(providerBidsProvider);
-    final contractsAsync = ref.watch(providerContractsProvider);
+    final bidsAsync = ref.watch(providerPendingBidsProvider);
+    final contractsAsync = ref.watch(providerActiveContractsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -53,10 +51,12 @@ class _ProviderProjectsScreenState extends ConsumerState<ProviderProjectsScreen>
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(providerBidsProvider);
+          ref.invalidate(providerPendingBidsProvider);
           ref.invalidate(providerContractsProvider);
+          ref.invalidate(providerActiveContractsProvider);
           await Future.wait([
-            ref.read(providerBidsProvider.future),
-            ref.read(providerContractsProvider.future),
+            ref.read(providerPendingBidsProvider.future),
+            ref.read(providerActiveContractsProvider.future),
           ]);
         },
         child: TabBarView(
@@ -66,13 +66,9 @@ class _ProviderProjectsScreenState extends ConsumerState<ProviderProjectsScreen>
               loading: () => const LoadingWidget(message: 'Loading bids...'),
               error: (e, _) => _ErrorList(message: 'Failed loading bids: $e'),
               data: (bids) {
-                final filteredBids = bids.where((bid) {
-                  return _bidStatusFilter == 'all' || bid.status == _bidStatusFilter;
-                }).toList();
-
                 if (bids.isEmpty) {
                   return const EmptyStateWidget(
-                    message: 'No bids yet. Place bids from Fresh Opportunities.',
+                    message: 'No open bids right now.',
                     icon: Icons.assignment_outlined,
                   );
                 }
@@ -80,28 +76,7 @@ class _ProviderProjectsScreenState extends ConsumerState<ProviderProjectsScreen>
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _StatusFilterBar(
-                      statuses: const [
-                        ('all', 'All'),
-                        ('pending', 'Pending'),
-                        ('accepted', 'Accepted'),
-                        ('rejected', 'Rejected'),
-                        ('withdrawn', 'Withdrawn'),
-                      ],
-                      selected: _bidStatusFilter,
-                      onSelected: (value) => setState(() => _bidStatusFilter = value),
-                    ),
-                    const SizedBox(height: 12),
-                    if (filteredBids.isEmpty)
-                      const SizedBox(
-                        height: 220,
-                        child: EmptyStateWidget(
-                          message: 'No bids match this status.',
-                          icon: Icons.filter_alt_off_outlined,
-                        ),
-                      )
-                    else
-                      ...filteredBids.map((bid) {
+                    ...bids.map((bid) {
                         final jobAsync = ref.watch(jobProvider(bid.jobId));
                         final job = jobAsync.valueOrNull;
 
@@ -139,13 +114,9 @@ class _ProviderProjectsScreenState extends ConsumerState<ProviderProjectsScreen>
               loading: () => const LoadingWidget(message: 'Loading contracts...'),
               error: (e, _) => _ErrorList(message: 'Failed loading contracts: $e'),
               data: (contracts) {
-                final filteredContracts = contracts.where((contract) {
-                  return _contractStatusFilter == 'all' || contract.status == _contractStatusFilter;
-                }).toList();
-
                 if (contracts.isEmpty) {
                   return const EmptyStateWidget(
-                    message: 'No contracts yet.',
+                    message: 'No active contracts yet.',
                     icon: Icons.handshake_outlined,
                   );
                 }
@@ -153,28 +124,7 @@ class _ProviderProjectsScreenState extends ConsumerState<ProviderProjectsScreen>
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _StatusFilterBar(
-                      statuses: const [
-                        ('all', 'All'),
-                        ('active', 'Active'),
-                        ('work_submitted', 'Work Submitted'),
-                        ('completed', 'Completed'),
-                        ('cancelled', 'Cancelled'),
-                      ],
-                      selected: _contractStatusFilter,
-                      onSelected: (value) => setState(() => _contractStatusFilter = value),
-                    ),
-                    const SizedBox(height: 12),
-                    if (filteredContracts.isEmpty)
-                      const SizedBox(
-                        height: 220,
-                        child: EmptyStateWidget(
-                          message: 'No contracts match this status.',
-                          icon: Icons.filter_alt_off_outlined,
-                        ),
-                      )
-                    else
-                      ...filteredContracts.map((contract) {
+                    ...contracts.map((contract) {
                         final bidAsync = ref.watch(bidProvider(contract.bidId));
                         final jobAsync = ref.watch(jobProvider(contract.jobId));
                         final clientAsync = ref.watch(userp.userProfileProvider(contract.clientId));
@@ -219,45 +169,12 @@ class _ProviderProjectsScreenState extends ConsumerState<ProviderProjectsScreen>
       'pending' => 'Pending',
       'accepted' => 'Accepted',
       'rejected' => 'Rejected',
-      'withdrawn' => 'Withdrawn',
-      'active' => 'Active',
-      'work_submitted' => 'Work Submitted',
-      'completed' => 'Completed',
       'cancelled' => 'Cancelled',
+      'active' => 'Active',
+      'completed' => 'Completed',
+      'terminated' => 'Terminated',
       _ => status,
     };
-  }
-}
-
-class _StatusFilterBar extends StatelessWidget {
-  final List<(String, String)> statuses;
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  const _StatusFilterBar({
-    required this.statuses,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 38,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: statuses.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final (value, label) = statuses[index];
-          return ChoiceChip(
-            label: Text(label),
-            selected: selected == value,
-            onSelected: (_) => onSelected(value),
-          );
-        },
-      ),
-    );
   }
 }
 
@@ -366,11 +283,10 @@ class _StatusPill extends StatelessWidget {
     final (background, foreground, label) = switch (status) {
       'accepted' => (const Color(0xFFDCFCE7), const Color(0xFF166534), 'Accepted'),
       'active' => (const Color(0xFFDCFCE7), const Color(0xFF166534), 'Active'),
-      'work_submitted' => (const Color(0xFFFEF3C7), const Color(0xFF92400E), 'Work Submitted'),
       'completed' => (const Color(0xFFDBEAFE), const Color(0xFF1D4ED8), 'Completed'),
       'rejected' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Rejected'),
       'cancelled' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Cancelled'),
-      'withdrawn' => (const Color(0xFFE5E7EB), const Color(0xFF374151), 'Withdrawn'),
+      'terminated' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Terminated'),
       _ => (const Color(0xFFFEF3C7), const Color(0xFF92400E), 'Pending'),
     };
 

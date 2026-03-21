@@ -26,7 +26,12 @@ mixin _$ProfileModel {
   String? get phone => throw _privateConstructorUsedError;
   String? get avatarUrl => throw _privateConstructorUsedError;
   String? get lastRole => throw _privateConstructorUsedError;
+  double? get averageRating => throw _privateConstructorUsedError;
   bool get isDeleted => throw _privateConstructorUsedError;
+  double? get latitude => throw _privateConstructorUsedError;
+  double? get longitude => throw _privateConstructorUsedError;
+  DateTime? get locationUpdatedAt => throw _privateConstructorUsedError;
+  int get immReqCnt => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
 
@@ -53,7 +58,12 @@ abstract class $ProfileModelCopyWith<$Res> {
     String? phone,
     String? avatarUrl,
     String? lastRole,
+    double? averageRating,
     bool isDeleted,
+    double? latitude,
+    double? longitude,
+    DateTime? locationUpdatedAt,
+    int immReqCnt,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -79,7 +89,12 @@ class _$ProfileModelCopyWithImpl<$Res, $Val extends ProfileModel>
     Object? phone = freezed,
     Object? avatarUrl = freezed,
     Object? lastRole = freezed,
+    Object? averageRating = freezed,
     Object? isDeleted = null,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
+    Object? locationUpdatedAt = freezed,
+    Object? immReqCnt = null,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -105,10 +120,30 @@ class _$ProfileModelCopyWithImpl<$Res, $Val extends ProfileModel>
                 ? _value.lastRole
                 : lastRole // ignore: cast_nullable_to_non_nullable
                       as String?,
+            averageRating: freezed == averageRating
+                ? _value.averageRating
+                : averageRating // ignore: cast_nullable_to_non_nullable
+                      as double?,
             isDeleted: null == isDeleted
                 ? _value.isDeleted
                 : isDeleted // ignore: cast_nullable_to_non_nullable
                       as bool,
+            latitude: freezed == latitude
+                ? _value.latitude
+                : latitude // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            longitude: freezed == longitude
+                ? _value.longitude
+                : longitude // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            locationUpdatedAt: freezed == locationUpdatedAt
+                ? _value.locationUpdatedAt
+                : locationUpdatedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
+            immReqCnt: null == immReqCnt
+                ? _value.immReqCnt
+                : immReqCnt // ignore: cast_nullable_to_non_nullable
+                      as int,
             createdAt: null == createdAt
                 ? _value.createdAt
                 : createdAt // ignore: cast_nullable_to_non_nullable
@@ -138,7 +173,12 @@ abstract class _$$ProfileModelImplCopyWith<$Res>
     String? phone,
     String? avatarUrl,
     String? lastRole,
+    double? averageRating,
     bool isDeleted,
+    double? latitude,
+    double? longitude,
+    DateTime? locationUpdatedAt,
+    int immReqCnt,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -163,7 +203,12 @@ class __$$ProfileModelImplCopyWithImpl<$Res>
     Object? phone = freezed,
     Object? avatarUrl = freezed,
     Object? lastRole = freezed,
+    Object? averageRating = freezed,
     Object? isDeleted = null,
+    Object? latitude = freezed,
+    Object? longitude = freezed,
+    Object? locationUpdatedAt = freezed,
+    Object? immReqCnt = null,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -189,10 +234,30 @@ class __$$ProfileModelImplCopyWithImpl<$Res>
             ? _value.lastRole
             : lastRole // ignore: cast_nullable_to_non_nullable
                   as String?,
+        averageRating: freezed == averageRating
+            ? _value.averageRating
+            : averageRating // ignore: cast_nullable_to_non_nullable
+                  as double?,
         isDeleted: null == isDeleted
             ? _value.isDeleted
             : isDeleted // ignore: cast_nullable_to_non_nullable
                   as bool,
+        latitude: freezed == latitude
+            ? _value.latitude
+            : latitude // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        longitude: freezed == longitude
+            ? _value.longitude
+            : longitude // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        locationUpdatedAt: freezed == locationUpdatedAt
+            ? _value.locationUpdatedAt
+            : locationUpdatedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
+        immReqCnt: null == immReqCnt
+            ? _value.immReqCnt
+            : immReqCnt // ignore: cast_nullable_to_non_nullable
+                  as int,
         createdAt: null == createdAt
             ? _value.createdAt
             : createdAt // ignore: cast_nullable_to_non_nullable
@@ -215,7 +280,12 @@ class _$ProfileModelImpl implements _ProfileModel {
     this.phone,
     this.avatarUrl,
     this.lastRole,
+    this.averageRating,
     this.isDeleted = false,
+    this.latitude,
+    this.longitude,
+    this.locationUpdatedAt,
+    this.immReqCnt = 0,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -234,8 +304,19 @@ class _$ProfileModelImpl implements _ProfileModel {
   @override
   final String? lastRole;
   @override
+  final double? averageRating;
+  @override
   @JsonKey()
   final bool isDeleted;
+  @override
+  final double? latitude;
+  @override
+  final double? longitude;
+  @override
+  final DateTime? locationUpdatedAt;
+  @override
+  @JsonKey()
+  final int immReqCnt;
   @override
   final DateTime createdAt;
   @override
@@ -243,7 +324,7 @@ class _$ProfileModelImpl implements _ProfileModel {
 
   @override
   String toString() {
-    return 'ProfileModel(id: $id, fullName: $fullName, phone: $phone, avatarUrl: $avatarUrl, lastRole: $lastRole, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'ProfileModel(id: $id, fullName: $fullName, phone: $phone, avatarUrl: $avatarUrl, lastRole: $lastRole, averageRating: $averageRating, isDeleted: $isDeleted, latitude: $latitude, longitude: $longitude, locationUpdatedAt: $locationUpdatedAt, immReqCnt: $immReqCnt, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -259,8 +340,18 @@ class _$ProfileModelImpl implements _ProfileModel {
                 other.avatarUrl == avatarUrl) &&
             (identical(other.lastRole, lastRole) ||
                 other.lastRole == lastRole) &&
+            (identical(other.averageRating, averageRating) ||
+                other.averageRating == averageRating) &&
             (identical(other.isDeleted, isDeleted) ||
                 other.isDeleted == isDeleted) &&
+            (identical(other.latitude, latitude) ||
+                other.latitude == latitude) &&
+            (identical(other.longitude, longitude) ||
+                other.longitude == longitude) &&
+            (identical(other.locationUpdatedAt, locationUpdatedAt) ||
+                other.locationUpdatedAt == locationUpdatedAt) &&
+            (identical(other.immReqCnt, immReqCnt) ||
+                other.immReqCnt == immReqCnt) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -276,7 +367,12 @@ class _$ProfileModelImpl implements _ProfileModel {
     phone,
     avatarUrl,
     lastRole,
+    averageRating,
     isDeleted,
+    latitude,
+    longitude,
+    locationUpdatedAt,
+    immReqCnt,
     createdAt,
     updatedAt,
   );
@@ -302,7 +398,12 @@ abstract class _ProfileModel implements ProfileModel {
     final String? phone,
     final String? avatarUrl,
     final String? lastRole,
+    final double? averageRating,
     final bool isDeleted,
+    final double? latitude,
+    final double? longitude,
+    final DateTime? locationUpdatedAt,
+    final int immReqCnt,
     required final DateTime createdAt,
     required final DateTime updatedAt,
   }) = _$ProfileModelImpl;
@@ -321,7 +422,17 @@ abstract class _ProfileModel implements ProfileModel {
   @override
   String? get lastRole;
   @override
+  double? get averageRating;
+  @override
   bool get isDeleted;
+  @override
+  double? get latitude;
+  @override
+  double? get longitude;
+  @override
+  DateTime? get locationUpdatedAt;
+  @override
+  int get immReqCnt;
   @override
   DateTime get createdAt;
   @override

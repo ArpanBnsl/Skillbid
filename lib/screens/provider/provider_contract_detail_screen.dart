@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../config/app_constants.dart';
 import '../../models/contract_model.dart';
 import '../../providers/bid_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/user_provider.dart' as userp;
+import '../../services/tracking_service.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/image_viewer.dart';
+import 'provider_tracking_screen.dart';
 import 'provider_shell.dart';
 
 class ProviderContractDetailScreen extends ConsumerStatefulWidget {
@@ -21,11 +24,38 @@ class ProviderContractDetailScreen extends ConsumerStatefulWidget {
 
 class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractDetailScreen> {
   bool _processing = false;
+  TrackingService? _trackingService;
+  String? _trackingContractId;
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.contract.trackingEnabled &&
+        widget.contract.status == AppConstants.contractStatusActive) {
+      _trackingService = TrackingService();
+      _trackingService!.startProviderTracking(contractId: widget.contract.id);
+      _trackingContractId = widget.contract.id;
+    }
+  }
+
+  @override
+  void dispose() {
+    _trackingService?.stopProviderTracking();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
     final liveContractAsync = ref.watch(contractProvider(widget.contract.id));
     final contract = liveContractAsync.valueOrNull ?? widget.contract;
+    if (contract.trackingEnabled &&
+        contract.status == AppConstants.contractStatusActive &&
+        _trackingContractId != contract.id) {
+      _trackingService ??= TrackingService();
+      _trackingService!.startProviderTracking(contractId: contract.id);
+      _trackingContractId = contract.id;
+    }
+
     final jobAsync = ref.watch(jobProvider(contract.jobId));
     final jobImagesAsync = ref.watch(jobImagesProvider(contract.jobId));
     final clientAsync = ref.watch(userp.userProfileProvider(contract.clientId));
@@ -107,19 +137,69 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
                   Text('Client: ${clientAsync.valueOrNull?.fullName ?? 'Client'}'),
                   const SizedBox(height: 6),
                   Text('Started: ${Formatters.formatDate(contract.createdAt)}'),
-                  if (contract.rating != null) ...[
+                  if (contract.workSubmittedAt != null) ...[
+                    const SizedBox(height: 6),
+                    Text('Work Submitted: ${Formatters.formatDateTime(contract.workSubmittedAt!)}'),
+                  ],
+                  if (contract.providerRating != null) ...[
                     const SizedBox(height: 10),
-                    Text('Client Rating: ${contract.rating}/5'),
+                    Text('Client Rating You Gave Provider: ${contract.providerRating}/5'),
+                  ],
+                  if (contract.clientRating != null) ...[
+                    const SizedBox(height: 6),
+                    Text('Your Rating For Client: ${contract.clientRating}/5'),
                   ],
                   if (contract.reviewText?.trim().isNotEmpty == true) ...[
                     const SizedBox(height: 6),
                     Text('Review: ${contract.reviewText}'),
+                  ],
+                  if (contract.terminatedBy != null) ...[
+                    const SizedBox(height: 6),
+                    Text('Terminated By: ${contract.terminatedBy}'),
                   ],
                 ],
               ),
             ),
           ),
           const SizedBox(height: 14),
+          if (contract.trackingEnabled)
+            Card(
+              color: Colors.blue.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Row(
+                      children: [
+                        Icon(Icons.location_on, color: Colors.blue),
+                        SizedBox(width: 10),
+                        Expanded(
+                          child: Text(
+                            'Live tracking is active — your location is being shared with the client.',
+                            style: TextStyle(fontWeight: FontWeight.w600),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 10),
+                    FilledButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => ProviderTrackingScreen(contract: contract),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.navigation_outlined),
+                      label: const Text('Open Navigation'),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          if (contract.trackingEnabled) const SizedBox(height: 10),
           jobImagesAsync.when(
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
@@ -163,7 +243,7 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
             },
           ),
           const SizedBox(height: 14),
-          if (contract.status == 'active') ...[
+          if (contract.status == AppConstants.contractStatusActive) ...[
             FilledButton.icon(
               onPressed: _processing ? null : () => _submitWork(contract.id),
               icon: _processing
@@ -176,9 +256,23 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
               label: const Text('Submit Work For Approval'),
             ),
             const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: _processing ? null : () => _confirmTerminate(contract.id),
+              icon: const Icon(Icons.cancel_outlined),
+              label: const Text('Terminate Contract'),
+            ),
+            const SizedBox(height: 10),
+          ],
+          if (contract.status == AppConstants.contractStatusCompleted && contract.clientRating == null) ...[
+            OutlinedButton.icon(
+              onPressed: _processing ? null : () => _rateClient(contract.id),
+              icon: const Icon(Icons.star_outline),
+              label: const Text('Rate Client'),
+            ),
+            const SizedBox(height: 10),
           ],
           FilledButton.icon(
-            onPressed: () => _openChat(contract),
+            onPressed: () => _openChat(contract, jobAsync.valueOrNull?.title),
             icon: const Icon(Icons.chat_outlined),
             label: const Text('Open Contract Chat'),
           ),
@@ -206,14 +300,110 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
     }
   }
 
-  Future<void> _openChat(ContractModel contract) async {
+  Future<void> _confirmTerminate(String contractId) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Terminate Contract'),
+        content: const Text('Are you sure you want to terminate this contract? This cannot be undone.'),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Terminate')),
+        ],
+      ),
+    );
+    if (confirmed != true) return;
+
+    setState(() => _processing = true);
+    try {
+      await ref.read(
+        terminateContractProvider(
+          (
+            contractId: contractId,
+            terminatedBy: AppConstants.contractTerminatedByProvider,
+          ),
+        ).future,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Contract terminated successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to terminate contract: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _processing = false);
+    }
+  }
+
+  Future<void> _rateClient(String contractId) async {
+    var selectedRating = 5;
+    final submitted = await showDialog<bool>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          title: const Text('Rate Client'),
+          content: Wrap(
+            spacing: 4,
+            children: List.generate(5, (index) {
+              final star = index + 1;
+              return IconButton(
+                onPressed: () => setDialogState(() => selectedRating = star),
+                icon: Icon(
+                  star <= selectedRating ? Icons.star : Icons.star_border,
+                  color: const Color(0xFFCA8A04),
+                ),
+              );
+            }),
+          ),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit')),
+          ],
+        ),
+      ),
+    );
+
+    if (submitted != true) return;
+
+    setState(() => _processing = true);
+    try {
+      await ref.read(
+        addProviderRatingProvider(
+          (
+            contractId: contractId,
+            rating: selectedRating,
+          ),
+        ).future,
+      );
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Client rated successfully.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to rate client: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _processing = false);
+    }
+  }
+
+  Future<void> _openChat(ContractModel contract, String? initialTitle) async {
     try {
       final existing = await ref.read(chatByContractProvider(contract.id).future);
       if (existing != null) {
         if (!mounted) return;
         Navigator.of(context).pushAndRemoveUntil(
           MaterialPageRoute(
-            builder: (_) => ProviderShell(initialIndex: 2, initialChatId: existing.id),
+            builder: (_) => ProviderShell(
+              initialIndex: 2,
+              initialChatId: existing.id,
+              initialChatTitle: initialTitle,
+            ),
           ),
           (route) => false,
         );
@@ -233,7 +423,11 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
       if (!mounted) return;
       Navigator.of(context).pushAndRemoveUntil(
         MaterialPageRoute(
-          builder: (_) => ProviderShell(initialIndex: 2, initialChatId: created.id),
+          builder: (_) => ProviderShell(
+            initialIndex: 2,
+            initialChatId: created.id,
+            initialChatTitle: initialTitle,
+          ),
         ),
         (route) => false,
       );
@@ -255,9 +449,8 @@ class _ContractStatusPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final (background, foreground, label) = switch (status) {
       'active' => (const Color(0xFFDCFCE7), const Color(0xFF166534), 'Active'),
-      'work_submitted' => (const Color(0xFFFEF3C7), const Color(0xFF92400E), 'Awaiting Approval'),
       'completed' => (const Color(0xFFDBEAFE), const Color(0xFF1D4ED8), 'Completed'),
-      'cancelled' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Cancelled'),
+      'terminated' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Terminated'),
       _ => (const Color(0xFFE5E7EB), const Color(0xFF374151), status),
     };
 

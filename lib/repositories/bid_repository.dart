@@ -1,4 +1,5 @@
 import '../models/bid_model.dart';
+import '../config/app_constants.dart';
 import '../services/database_service.dart';
 import '../utils/exceptions.dart';
 import '../utils/app_logger.dart';
@@ -8,7 +9,13 @@ class BidRepository {
 
   Map<String, dynamic> _mapBidRow(Map<String, dynamic> row) {
     dynamic asIso(dynamic value) {
-      if (value is DateTime) return value.toIso8601String();
+      if (value is DateTime) return value.toUtc().toIso8601String();
+      if (value is String) {
+        final parsed = DateTime.tryParse(value);
+        if (parsed != null) {
+          return parsed.toUtc().toIso8601String();
+        }
+      }
       return value;
     }
 
@@ -19,7 +26,7 @@ class BidRepository {
       'amount': (row['amount'] as num?)?.toDouble() ?? 0,
       'estimatedDays': (row['estimated_days'] as num?)?.toInt(),
       'message': row['message'],
-      'status': row['status'] ?? 'pending',
+      'status': row['status'] ?? AppConstants.bidStatusPending,
       'isDeleted': row['is_deleted'] ?? false,
       'createdAt': asIso(row['created_at']),
       'updatedAt': asIso(row['updated_at']),
@@ -48,11 +55,26 @@ class BidRepository {
       if (job['is_deleted'] == true) {
         throw AppException(message: 'This job is no longer available');
       }
-      if (job['status'] != 'open') {
+      if (job['status'] != AppConstants.jobStatusOpen) {
         throw AppException(message: 'Bids can only be placed on open jobs');
       }
       if (job['client_id'] == providerId) {
         throw AppException(message: 'You cannot bid on your own project');
+      }
+
+      final providerRows = await _databaseService.fetchData(
+        table: 'provider_profiles',
+        select: 'is_banned,rel_score',
+        filters: {'user_id': providerId},
+      );
+      if (providerRows.isNotEmpty) {
+        final isBanned = providerRows.first['is_banned'] == true;
+        final relScore = (providerRows.first['rel_score'] as num?)?.toDouble() ?? 5.0;
+        if (isBanned || relScore <= 0) {
+          throw AppException(
+            message: 'Your provider account is restricted due to low reliability score.',
+          );
+        }
       }
 
       final result = await _databaseService.insertData(
@@ -162,7 +184,7 @@ class BidRepository {
   /// Withdraw bid
   Future<void> withdrawBid(String bidId) async {
     try {
-      await updateBidStatus(bidId: bidId, status: 'withdrawn');
+      await updateBidStatus(bidId: bidId, status: AppConstants.bidStatusCancelled);
     } catch (e) {
       AppLogger.logError('Withdraw bid failed for bidId: $bidId', e);
       if (e is AppException) rethrow;
@@ -217,14 +239,34 @@ class BidRepository {
     try {
       final bids = await getJobBids(jobId);
       for (final bid in bids) {
-        if (bid.id != acceptedBidId && bid.status == 'pending') {
-          await updateBidStatus(bidId: bid.id, status: 'rejected');
+        if (bid.id != acceptedBidId && bid.status == AppConstants.bidStatusPending) {
+          await updateBidStatus(bidId: bid.id, status: AppConstants.bidStatusRejected);
         }
       }
     } catch (e) {
       AppLogger.logError('Reject other bids failed for jobId: $jobId', e);
       throw AppException(
         message: 'Reject other bids failed: $e',
+        originalException: e,
+      );
+    }
+  }
+
+  Future<void> cancelBidsForJob(String jobId) async {
+    try {
+      final bids = await getJobBids(jobId);
+      for (final bid in bids) {
+        if (bid.status == AppConstants.bidStatusPending) {
+          await updateBidStatus(
+            bidId: bid.id,
+            status: AppConstants.bidStatusCancelled,
+          );
+        }
+      }
+    } catch (e) {
+      AppLogger.logError('Cancel bids for job failed for jobId: $jobId', e);
+      throw AppException(
+        message: 'Cancel bids for job failed: $e',
         originalException: e,
       );
     }

@@ -9,8 +9,9 @@ import 'provider_profile_screen.dart';
 class ProviderShell extends StatefulWidget {
   final int initialIndex;
   final String? initialChatId;
+  final String? initialChatTitle;
 
-  const ProviderShell({super.key, this.initialIndex = 0, this.initialChatId});
+  const ProviderShell({super.key, this.initialIndex = 0, this.initialChatId, this.initialChatTitle});
 
   @override
   State<ProviderShell> createState() => _ProviderShellState();
@@ -29,7 +30,10 @@ class _ProviderShellState extends State<ProviderShell> {
         if (!mounted) return;
         Navigator.of(context).push(
           MaterialPageRoute(
-            builder: (_) => ChatDetailScreen(chatId: widget.initialChatId!),
+            builder: (_) => ChatDetailScreen(
+              chatId: widget.initialChatId!,
+              initialTitle: widget.initialChatTitle,
+            ),
           ),
         );
       });

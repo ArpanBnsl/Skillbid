@@ -27,11 +27,18 @@ mixin _$ContractModel {
   String get clientId => throw _privateConstructorUsedError;
   String get providerId => throw _privateConstructorUsedError;
   String get status => throw _privateConstructorUsedError;
+  String? get terminatedBy => throw _privateConstructorUsedError;
   DateTime? get startDate => throw _privateConstructorUsedError;
   DateTime? get endDate => throw _privateConstructorUsedError;
-  int? get rating => throw _privateConstructorUsedError; // 1-5
+  DateTime? get workSubmittedAt => throw _privateConstructorUsedError;
+  int? get providerRating => throw _privateConstructorUsedError;
+  int? get clientRating => throw _privateConstructorUsedError;
   String? get reviewText => throw _privateConstructorUsedError;
   bool get isDeleted => throw _privateConstructorUsedError;
+  double? get providerLat => throw _privateConstructorUsedError;
+  double? get providerLng => throw _privateConstructorUsedError;
+  DateTime? get lastLocationUpdate => throw _privateConstructorUsedError;
+  bool get trackingEnabled => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
   DateTime get updatedAt => throw _privateConstructorUsedError;
 
@@ -59,11 +66,18 @@ abstract class $ContractModelCopyWith<$Res> {
     String clientId,
     String providerId,
     String status,
+    String? terminatedBy,
     DateTime? startDate,
     DateTime? endDate,
-    int? rating,
+    DateTime? workSubmittedAt,
+    int? providerRating,
+    int? clientRating,
     String? reviewText,
     bool isDeleted,
+    double? providerLat,
+    double? providerLng,
+    DateTime? lastLocationUpdate,
+    bool trackingEnabled,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -90,11 +104,18 @@ class _$ContractModelCopyWithImpl<$Res, $Val extends ContractModel>
     Object? clientId = null,
     Object? providerId = null,
     Object? status = null,
+    Object? terminatedBy = freezed,
     Object? startDate = freezed,
     Object? endDate = freezed,
-    Object? rating = freezed,
+    Object? workSubmittedAt = freezed,
+    Object? providerRating = freezed,
+    Object? clientRating = freezed,
     Object? reviewText = freezed,
     Object? isDeleted = null,
+    Object? providerLat = freezed,
+    Object? providerLng = freezed,
+    Object? lastLocationUpdate = freezed,
+    Object? trackingEnabled = null,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -124,6 +145,10 @@ class _$ContractModelCopyWithImpl<$Res, $Val extends ContractModel>
                 ? _value.status
                 : status // ignore: cast_nullable_to_non_nullable
                       as String,
+            terminatedBy: freezed == terminatedBy
+                ? _value.terminatedBy
+                : terminatedBy // ignore: cast_nullable_to_non_nullable
+                      as String?,
             startDate: freezed == startDate
                 ? _value.startDate
                 : startDate // ignore: cast_nullable_to_non_nullable
@@ -132,9 +157,17 @@ class _$ContractModelCopyWithImpl<$Res, $Val extends ContractModel>
                 ? _value.endDate
                 : endDate // ignore: cast_nullable_to_non_nullable
                       as DateTime?,
-            rating: freezed == rating
-                ? _value.rating
-                : rating // ignore: cast_nullable_to_non_nullable
+            workSubmittedAt: freezed == workSubmittedAt
+                ? _value.workSubmittedAt
+                : workSubmittedAt // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
+            providerRating: freezed == providerRating
+                ? _value.providerRating
+                : providerRating // ignore: cast_nullable_to_non_nullable
+                      as int?,
+            clientRating: freezed == clientRating
+                ? _value.clientRating
+                : clientRating // ignore: cast_nullable_to_non_nullable
                       as int?,
             reviewText: freezed == reviewText
                 ? _value.reviewText
@@ -143,6 +176,22 @@ class _$ContractModelCopyWithImpl<$Res, $Val extends ContractModel>
             isDeleted: null == isDeleted
                 ? _value.isDeleted
                 : isDeleted // ignore: cast_nullable_to_non_nullable
+                      as bool,
+            providerLat: freezed == providerLat
+                ? _value.providerLat
+                : providerLat // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            providerLng: freezed == providerLng
+                ? _value.providerLng
+                : providerLng // ignore: cast_nullable_to_non_nullable
+                      as double?,
+            lastLocationUpdate: freezed == lastLocationUpdate
+                ? _value.lastLocationUpdate
+                : lastLocationUpdate // ignore: cast_nullable_to_non_nullable
+                      as DateTime?,
+            trackingEnabled: null == trackingEnabled
+                ? _value.trackingEnabled
+                : trackingEnabled // ignore: cast_nullable_to_non_nullable
                       as bool,
             createdAt: null == createdAt
                 ? _value.createdAt
@@ -174,11 +223,18 @@ abstract class _$$ContractModelImplCopyWith<$Res>
     String clientId,
     String providerId,
     String status,
+    String? terminatedBy,
     DateTime? startDate,
     DateTime? endDate,
-    int? rating,
+    DateTime? workSubmittedAt,
+    int? providerRating,
+    int? clientRating,
     String? reviewText,
     bool isDeleted,
+    double? providerLat,
+    double? providerLng,
+    DateTime? lastLocationUpdate,
+    bool trackingEnabled,
     DateTime createdAt,
     DateTime updatedAt,
   });
@@ -204,11 +260,18 @@ class __$$ContractModelImplCopyWithImpl<$Res>
     Object? clientId = null,
     Object? providerId = null,
     Object? status = null,
+    Object? terminatedBy = freezed,
     Object? startDate = freezed,
     Object? endDate = freezed,
-    Object? rating = freezed,
+    Object? workSubmittedAt = freezed,
+    Object? providerRating = freezed,
+    Object? clientRating = freezed,
     Object? reviewText = freezed,
     Object? isDeleted = null,
+    Object? providerLat = freezed,
+    Object? providerLng = freezed,
+    Object? lastLocationUpdate = freezed,
+    Object? trackingEnabled = null,
     Object? createdAt = null,
     Object? updatedAt = null,
   }) {
@@ -238,6 +301,10 @@ class __$$ContractModelImplCopyWithImpl<$Res>
             ? _value.status
             : status // ignore: cast_nullable_to_non_nullable
                   as String,
+        terminatedBy: freezed == terminatedBy
+            ? _value.terminatedBy
+            : terminatedBy // ignore: cast_nullable_to_non_nullable
+                  as String?,
         startDate: freezed == startDate
             ? _value.startDate
             : startDate // ignore: cast_nullable_to_non_nullable
@@ -246,9 +313,17 @@ class __$$ContractModelImplCopyWithImpl<$Res>
             ? _value.endDate
             : endDate // ignore: cast_nullable_to_non_nullable
                   as DateTime?,
-        rating: freezed == rating
-            ? _value.rating
-            : rating // ignore: cast_nullable_to_non_nullable
+        workSubmittedAt: freezed == workSubmittedAt
+            ? _value.workSubmittedAt
+            : workSubmittedAt // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
+        providerRating: freezed == providerRating
+            ? _value.providerRating
+            : providerRating // ignore: cast_nullable_to_non_nullable
+                  as int?,
+        clientRating: freezed == clientRating
+            ? _value.clientRating
+            : clientRating // ignore: cast_nullable_to_non_nullable
                   as int?,
         reviewText: freezed == reviewText
             ? _value.reviewText
@@ -257,6 +332,22 @@ class __$$ContractModelImplCopyWithImpl<$Res>
         isDeleted: null == isDeleted
             ? _value.isDeleted
             : isDeleted // ignore: cast_nullable_to_non_nullable
+                  as bool,
+        providerLat: freezed == providerLat
+            ? _value.providerLat
+            : providerLat // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        providerLng: freezed == providerLng
+            ? _value.providerLng
+            : providerLng // ignore: cast_nullable_to_non_nullable
+                  as double?,
+        lastLocationUpdate: freezed == lastLocationUpdate
+            ? _value.lastLocationUpdate
+            : lastLocationUpdate // ignore: cast_nullable_to_non_nullable
+                  as DateTime?,
+        trackingEnabled: null == trackingEnabled
+            ? _value.trackingEnabled
+            : trackingEnabled // ignore: cast_nullable_to_non_nullable
                   as bool,
         createdAt: null == createdAt
             ? _value.createdAt
@@ -281,11 +372,18 @@ class _$ContractModelImpl implements _ContractModel {
     required this.clientId,
     required this.providerId,
     this.status = 'active',
+    this.terminatedBy,
     this.startDate,
     this.endDate,
-    this.rating,
+    this.workSubmittedAt,
+    this.providerRating,
+    this.clientRating,
     this.reviewText,
     this.isDeleted = false,
+    this.providerLat,
+    this.providerLng,
+    this.lastLocationUpdate,
+    this.trackingEnabled = false,
     required this.createdAt,
     required this.updatedAt,
   });
@@ -307,17 +405,31 @@ class _$ContractModelImpl implements _ContractModel {
   @JsonKey()
   final String status;
   @override
+  final String? terminatedBy;
+  @override
   final DateTime? startDate;
   @override
   final DateTime? endDate;
   @override
-  final int? rating;
-  // 1-5
+  final DateTime? workSubmittedAt;
+  @override
+  final int? providerRating;
+  @override
+  final int? clientRating;
   @override
   final String? reviewText;
   @override
   @JsonKey()
   final bool isDeleted;
+  @override
+  final double? providerLat;
+  @override
+  final double? providerLng;
+  @override
+  final DateTime? lastLocationUpdate;
+  @override
+  @JsonKey()
+  final bool trackingEnabled;
   @override
   final DateTime createdAt;
   @override
@@ -325,7 +437,7 @@ class _$ContractModelImpl implements _ContractModel {
 
   @override
   String toString() {
-    return 'ContractModel(id: $id, jobId: $jobId, bidId: $bidId, clientId: $clientId, providerId: $providerId, status: $status, startDate: $startDate, endDate: $endDate, rating: $rating, reviewText: $reviewText, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'ContractModel(id: $id, jobId: $jobId, bidId: $bidId, clientId: $clientId, providerId: $providerId, status: $status, terminatedBy: $terminatedBy, startDate: $startDate, endDate: $endDate, workSubmittedAt: $workSubmittedAt, providerRating: $providerRating, clientRating: $clientRating, reviewText: $reviewText, isDeleted: $isDeleted, providerLat: $providerLat, providerLng: $providerLng, lastLocationUpdate: $lastLocationUpdate, trackingEnabled: $trackingEnabled, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -341,14 +453,29 @@ class _$ContractModelImpl implements _ContractModel {
             (identical(other.providerId, providerId) ||
                 other.providerId == providerId) &&
             (identical(other.status, status) || other.status == status) &&
+            (identical(other.terminatedBy, terminatedBy) ||
+                other.terminatedBy == terminatedBy) &&
             (identical(other.startDate, startDate) ||
                 other.startDate == startDate) &&
             (identical(other.endDate, endDate) || other.endDate == endDate) &&
-            (identical(other.rating, rating) || other.rating == rating) &&
+            (identical(other.workSubmittedAt, workSubmittedAt) ||
+                other.workSubmittedAt == workSubmittedAt) &&
+            (identical(other.providerRating, providerRating) ||
+                other.providerRating == providerRating) &&
+            (identical(other.clientRating, clientRating) ||
+                other.clientRating == clientRating) &&
             (identical(other.reviewText, reviewText) ||
                 other.reviewText == reviewText) &&
             (identical(other.isDeleted, isDeleted) ||
                 other.isDeleted == isDeleted) &&
+            (identical(other.providerLat, providerLat) ||
+                other.providerLat == providerLat) &&
+            (identical(other.providerLng, providerLng) ||
+                other.providerLng == providerLng) &&
+            (identical(other.lastLocationUpdate, lastLocationUpdate) ||
+                other.lastLocationUpdate == lastLocationUpdate) &&
+            (identical(other.trackingEnabled, trackingEnabled) ||
+                other.trackingEnabled == trackingEnabled) &&
             (identical(other.createdAt, createdAt) ||
                 other.createdAt == createdAt) &&
             (identical(other.updatedAt, updatedAt) ||
@@ -357,7 +484,7 @@ class _$ContractModelImpl implements _ContractModel {
 
   @JsonKey(includeFromJson: false, includeToJson: false)
   @override
-  int get hashCode => Object.hash(
+  int get hashCode => Object.hashAll([
     runtimeType,
     id,
     jobId,
@@ -365,14 +492,21 @@ class _$ContractModelImpl implements _ContractModel {
     clientId,
     providerId,
     status,
+    terminatedBy,
     startDate,
     endDate,
-    rating,
+    workSubmittedAt,
+    providerRating,
+    clientRating,
     reviewText,
     isDeleted,
+    providerLat,
+    providerLng,
+    lastLocationUpdate,
+    trackingEnabled,
     createdAt,
     updatedAt,
-  );
+  ]);
 
   /// Create a copy of ContractModel
   /// with the given fields replaced by the non-null parameter values.
@@ -396,11 +530,18 @@ abstract class _ContractModel implements ContractModel {
     required final String clientId,
     required final String providerId,
     final String status,
+    final String? terminatedBy,
     final DateTime? startDate,
     final DateTime? endDate,
-    final int? rating,
+    final DateTime? workSubmittedAt,
+    final int? providerRating,
+    final int? clientRating,
     final String? reviewText,
     final bool isDeleted,
+    final double? providerLat,
+    final double? providerLng,
+    final DateTime? lastLocationUpdate,
+    final bool trackingEnabled,
     required final DateTime createdAt,
     required final DateTime updatedAt,
   }) = _$ContractModelImpl;
@@ -421,15 +562,29 @@ abstract class _ContractModel implements ContractModel {
   @override
   String get status;
   @override
+  String? get terminatedBy;
+  @override
   DateTime? get startDate;
   @override
   DateTime? get endDate;
   @override
-  int? get rating; // 1-5
+  DateTime? get workSubmittedAt;
+  @override
+  int? get providerRating;
+  @override
+  int? get clientRating;
   @override
   String? get reviewText;
   @override
   bool get isDeleted;
+  @override
+  double? get providerLat;
+  @override
+  double? get providerLng;
+  @override
+  DateTime? get lastLocationUpdate;
+  @override
+  bool get trackingEnabled;
   @override
   DateTime get createdAt;
   @override

@@ -2,12 +2,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user/profile_model.dart';
 import '../models/user/provider_profile_model.dart';
 import '../repositories/user_repository.dart';
+import '../services/location_service.dart';
 import 'auth_provider.dart';
 
 final userRepositoryProvider = Provider((ref) => UserRepository());
+final locationServiceProvider = Provider((ref) => LocationService());
 
 /// Get current user profile
-final currentUserProvider = FutureProvider<ProfileModel?>((ref) async {
+final currentUserProvider = FutureProvider.autoDispose<ProfileModel?>((ref) async {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return null;
   
@@ -16,13 +18,13 @@ final currentUserProvider = FutureProvider<ProfileModel?>((ref) async {
 });
 
 /// Get user profile by ID
-final userProfileProvider = FutureProvider.family<ProfileModel?, String>((ref, userId) async {
+final userProfileProvider = FutureProvider.autoDispose.family<ProfileModel?, String>((ref, userId) async {
   final repo = ref.watch(userRepositoryProvider);
   return repo.getUserProfile(userId);
 });
 
 /// Get provider profile
-final providerProfileProvider = FutureProvider.family<ProviderProfileModel?, String>((ref, providerId) async {
+final providerProfileProvider = FutureProvider.autoDispose.family<ProviderProfileModel?, String>((ref, providerId) async {
   final repo = ref.watch(userRepositoryProvider);
   return repo.getProviderProfile(providerId);
 });
@@ -74,4 +76,22 @@ final updateProviderProfileProvider = FutureProvider.family<void, ({String? bio,
 final providerSkillIdsProvider = FutureProvider.family<List<int>, String>((ref, providerId) async {
   final repo = ref.watch(userRepositoryProvider);
   return repo.getProviderSkills(providerId);
+});
+
+/// Fetch current device location and save it to the user's profile.
+/// Call this on app launch / sign-in.
+final refreshUserLocationProvider = FutureProvider<void>((ref) async {
+  final userId = ref.watch(currentUserIdProvider);
+  if (userId == null) return;
+
+  final locationService = ref.read(locationServiceProvider);
+  final position = await locationService.getCurrentPosition();
+  if (position == null) return;
+
+  final repo = ref.read(userRepositoryProvider);
+  await repo.updateUserLocation(
+    userId: userId,
+    latitude: position.latitude,
+    longitude: position.longitude,
+  );
 });

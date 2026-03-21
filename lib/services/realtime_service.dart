@@ -42,6 +42,52 @@ class RealtimeService {
     return channel;
   }
 
+  /// Subscribe to real-time bid updates for a specific job
+  RealtimeChannel subscribeToBids(
+    String jobId, {
+    void Function(PostgresChangePayload payload)? onChange,
+  }) {
+    final channel = supabase.channel('public:bids:$jobId');
+
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.insert,
+      schema: 'public',
+      table: 'bids',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'job_id',
+        value: jobId,
+      ),
+      callback: (payload) => onChange?.call(payload),
+    );
+
+    channel.subscribe();
+    return channel;
+  }
+
+  /// Subscribe to contract location updates (for live tracking)
+  RealtimeChannel subscribeToContractUpdates(
+    String contractId, {
+    void Function(PostgresChangePayload payload)? onChange,
+  }) {
+    final channel = supabase.channel('public:contracts:$contractId');
+
+    channel.onPostgresChanges(
+      event: PostgresChangeEvent.update,
+      schema: 'public',
+      table: 'contracts',
+      filter: PostgresChangeFilter(
+        type: PostgresChangeFilterType.eq,
+        column: 'id',
+        value: contractId,
+      ),
+      callback: (payload) => onChange?.call(payload),
+    );
+
+    channel.subscribe();
+    return channel;
+  }
+
   /// Unsubscribe from a channel
   Future<void> unsubscribe(RealtimeChannel channel) async {
     await supabase.removeChannel(channel);

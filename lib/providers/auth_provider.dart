@@ -1,4 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'bid_provider.dart';
+import 'chat_provider.dart';
+import 'contract_provider.dart';
+import 'job_provider.dart';
+import 'portfolio_provider.dart';
+import 'user_provider.dart' as userp;
 import '../repositories/auth_repository.dart';
 import '../services/auth_service.dart';
 import '../config/supabase_config.dart';
@@ -7,59 +13,86 @@ final authServiceProvider = Provider((ref) => AuthService());
 
 final authRepositoryProvider = Provider((ref) => AuthRepository());
 
-/// Track authentication state - properly watches Supabase auth state
-final authStateProvider = StreamProvider<bool>((ref) {
-  return supabase.auth.onAuthStateChange.map((event) {
-    return event.session != null;
-  });
+/// Tracks auth session user IDs so account switches invalidate dependent providers.
+final authSessionUserIdProvider = StreamProvider<String?>((ref) async* {
+  yield getCurrentUserId();
+  yield* supabase.auth.onAuthStateChange.map((event) => event.session?.user.id);
+});
+
+/// Track authentication state from session-aware stream
+final authStateProvider = Provider<bool>((ref) {
+  final sessionUserId = ref.watch(authSessionUserIdProvider).valueOrNull;
+  return sessionUserId != null;
 });
 
 /// Check if user is authenticated
 final isAuthenticatedProvider = Provider((ref) {
   final authState = ref.watch(authStateProvider);
-  final hasSession = supabase.auth.currentSession != null;
-  return authState.maybeWhen(
-    data: (isAuthenticated) => isAuthenticated || hasSession,
-    orElse: () => hasSession,
-  );
+  return authState || supabase.auth.currentSession != null;
 });
 
 /// Get current user ID from auth session
 final currentUserIdProvider = Provider((ref) {
-  final authState = ref.watch(authStateProvider);
-  final sessionUserId = getCurrentUserId();
-  return authState.maybeWhen(
-    data: (_) => getCurrentUserId() ?? sessionUserId,
-    orElse: () => sessionUserId,
-  );
+  final streamUserId = ref.watch(authSessionUserIdProvider).valueOrNull;
+  return streamUserId ?? getCurrentUserId();
 });
 
 /// Get current user email from auth session
 final currentUserEmailProvider = Provider<String?>((ref) {
-  ref.watch(authStateProvider);
+  ref.watch(authSessionUserIdProvider);
   return supabase.auth.currentUser?.email;
 });
 
 /// Get current user from auth session
 final currentUserProvider = Provider((ref) {
-  final authState = ref.watch(authStateProvider);
-  final sessionUser = getCurrentUser();
-  return authState.maybeWhen(
-    data: (_) => getCurrentUser() ?? sessionUser,
-    orElse: () => sessionUser,
-  );
+  ref.watch(authSessionUserIdProvider);
+  return getCurrentUser();
 });
 
 /// Sign in with email and password
 final signInProvider = FutureProvider.family<void, ({String email, String password})>((ref, params) async {
   final repo = ref.watch(authRepositoryProvider);
   await repo.signIn(email: params.email, password: params.password);
+
+  // Refresh all auth-dependent providers on account switch.
+  ref.invalidate(authSessionUserIdProvider);
+  ref.invalidate(authStateProvider);
+  ref.invalidate(currentUserIdProvider);
+  ref.invalidate(currentUserProvider);
+  ref.invalidate(currentUserEmailProvider);
+  ref.invalidate(userp.currentUserProvider);
+  ref.invalidate(userp.userRoleProvider);
+  ref.invalidate(providerBidsProvider);
+  ref.invalidate(clientJobsProvider);
+  ref.invalidate(availableJobsProvider);
+  ref.invalidate(clientContractsProvider);
+  ref.invalidate(providerContractsProvider);
+  ref.invalidate(userChatsProvider);
+  ref.invalidate(userChatOverviewsProvider);
+  ref.invalidate(providerPortfolioProvider);
 });
 
 /// Sign out
 final signOutProvider = FutureProvider<void>((ref) async {
   final repo = ref.watch(authRepositoryProvider);
   await repo.signOut();
+
+  // Force immediate state refresh on account switch/sign-out.
+  ref.invalidate(authSessionUserIdProvider);
+  ref.invalidate(authStateProvider);
+  ref.invalidate(currentUserIdProvider);
+  ref.invalidate(currentUserProvider);
+  ref.invalidate(currentUserEmailProvider);
+  ref.invalidate(userp.currentUserProvider);
+  ref.invalidate(userp.userRoleProvider);
+  ref.invalidate(providerBidsProvider);
+  ref.invalidate(clientJobsProvider);
+  ref.invalidate(availableJobsProvider);
+  ref.invalidate(clientContractsProvider);
+  ref.invalidate(providerContractsProvider);
+  ref.invalidate(userChatsProvider);
+  ref.invalidate(userChatOverviewsProvider);
+  ref.invalidate(providerPortfolioProvider);
 });
 
 /// Sign up

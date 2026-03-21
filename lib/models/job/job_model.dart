@@ -6,6 +6,8 @@ part 'job_model.g.dart';
 enum JobStatus {
   @JsonValue('open')
   open,
+  @JsonValue('deleted')
+  deleted,
   @JsonValue('in_progress')
   inProgress,
   @JsonValue('completed')
@@ -29,6 +31,10 @@ class JobModel with _$JobModel {
     int? desiredCompletionDays,
     @Default('open') String status,
     @Default(false) bool isDeleted,
+    @Default(false) bool isImmediate,
+    DateTime? expiresAt,
+    double? jobLat,
+    double? jobLng,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _JobModel;

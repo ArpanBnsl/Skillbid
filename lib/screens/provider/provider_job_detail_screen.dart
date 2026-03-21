@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:latlong2/latlong.dart';
 import '../../models/job/job_model.dart';
 import '../../providers/bid_provider.dart';
 import '../../providers/job_provider.dart';
@@ -55,6 +57,84 @@ class ProviderJobDetailScreen extends ConsumerWidget {
               ],
             ),
           ),
+          if (job.isImmediate) ...[
+            const SizedBox(height: 10),
+            Card(
+              color: Colors.orange.shade50,
+              child: Padding(
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: [
+                    Icon(Icons.bolt, color: Colors.orange.shade800),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text('Immediate Service',
+                              style: TextStyle(fontWeight: FontWeight.w700)),
+                          if (job.expiresAt != null) ...[
+                            const SizedBox(height: 2),
+                            Builder(builder: (_) {
+                              final remaining = job.expiresAt!.difference(DateTime.now());
+                              final expired =
+                                  remaining.isNegative || remaining == Duration.zero;
+                              return Text(
+                                expired
+                                    ? 'Expired'
+                                    : 'Expires in ${remaining.inHours}h ${remaining.inMinutes.remainder(60)}m',
+                                style: TextStyle(
+                                  color: expired ? Colors.red : Colors.orange.shade900,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              );
+                            }),
+                          ],
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+          if (job.jobLat != null && job.jobLng != null) ...[
+            const SizedBox(height: 10),
+            Card(
+              clipBehavior: Clip.hardEdge,
+              child: SizedBox(
+                height: 180,
+                child: FlutterMap(
+                  options: MapOptions(
+                    initialCenter: LatLng(job.jobLat!, job.jobLng!),
+                    initialZoom: 14,
+                    interactionOptions: const InteractionOptions(
+                      flags: InteractiveFlag.none,
+                    ),
+                  ),
+                  children: [
+                    TileLayer(
+                      urlTemplate:
+                          'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                      subdomains: const ['a', 'b', 'c', 'd'],
+                      userAgentPackageName: 'com.skillbid.app',
+                    ),
+                    MarkerLayer(
+                      markers: [
+                        Marker(
+                          point: LatLng(job.jobLat!, job.jobLng!),
+                          width: 36,
+                          height: 36,
+                          child: const Icon(Icons.location_on,
+                              color: Colors.red, size: 32),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
           const SizedBox(height: 16),
           Card(
             child: Padding(

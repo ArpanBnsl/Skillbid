@@ -10,8 +10,8 @@ enum BidStatus {
   accepted,
   @JsonValue('rejected')
   rejected,
-  @JsonValue('withdrawn')
-  withdrawn;
+  @JsonValue('cancelled')
+  cancelled;
 
   String toJson() => name;
 }

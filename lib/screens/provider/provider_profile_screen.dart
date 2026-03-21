@@ -4,11 +4,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:image_picker/image_picker.dart';
+import '../../models/bid_model.dart';
+import '../../models/contract_model.dart';
 import '../../models/portfolio/portfolio_image_model.dart';
 import '../../models/portfolio/portfolio_model.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/bid_provider.dart';
 import '../../providers/contract_provider.dart';
+import '../../providers/job_provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../providers/user_provider.dart' as userp;
 import '../../utils/formatters.dart';
@@ -34,6 +37,8 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
         : ref.watch(userp.providerProfileProvider(userId));
     final bidsAsync = ref.watch(providerBidsProvider);
     final contractsAsync = ref.watch(providerContractsProvider);
+    final pastBidsAsync = ref.watch(providerPastBidsProvider);
+    final pastContractsAsync = ref.watch(providerPastContractsProvider);
     final portfolioAsync = ref.watch(providerPortfolioProvider);
     final ratingAsync = userId == null
       ? const AsyncValue.data(null)
@@ -108,6 +113,7 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                       if (averageRating != null) ...[
                         _statRow('Average Rating', '${averageRating.toStringAsFixed(1)}/5'),
                       ],
+                      _statRow('Reliability Score', '${(providerProfile?.relScore ?? 5.0).toStringAsFixed(1)}/10'),
                       _statRow('Bids', '$bidsCount'),
                       _statRow('Contracts', '$contractsCount'),
                       _statRow('Completed', '$completedCount'),
@@ -257,6 +263,14 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
                   );
                 },
               ),
+              const SizedBox(height: 16),
+              Text('Past Projects', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 10),
+              ..._buildPastProjectCards(
+                context: context,
+                pastContracts: pastContractsAsync.valueOrNull ?? const [],
+                pastBids: pastBidsAsync.valueOrNull ?? const [],
+              ),
               const SizedBox(height: 20),
               OutlinedButton.icon(
                 onPressed: () async {
@@ -281,6 +295,128 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
         },
       ),
     );
+  }
+
+  List<Widget> _buildPastProjectCards({
+    required BuildContext context,
+    required List<ContractModel> pastContracts,
+    required List<BidModel> pastBids,
+  }) {
+    if (pastContracts.isEmpty && pastBids.isEmpty) {
+      return const [
+        Card(
+          child: Padding(
+            padding: EdgeInsets.all(14),
+            child: Text('No past projects yet.'),
+          ),
+        ),
+      ];
+    }
+
+    final widgets = <Widget>[];
+    final contractedJobIds = pastContracts.map((c) => c.jobId).toSet();
+
+    for (final contract in pastContracts) {
+      widgets.add(
+        Consumer(
+          builder: (context, ref, _) {
+            final jobAsync = ref.watch(jobProvider(contract.jobId));
+            final title = jobAsync.valueOrNull?.title ?? 'Project ${contract.jobId.substring(0, 8)}';
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ExpansionTile(
+                leading: const Icon(Icons.handshake_outlined),
+                title: Text(title),
+                subtitle: Text('Contract • ${_statusLabel(contract.status)}'),
+                childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                children: [
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Started: ${Formatters.formatDate(contract.startDate ?? contract.createdAt)}'),
+                  ),
+                  const SizedBox(height: 4),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text('Ended: ${Formatters.formatDate(contract.endDate ?? contract.updatedAt)}'),
+                  ),
+                  if (contract.terminatedBy != null) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Terminated by: ${contract.terminatedBy}'),
+                    ),
+                  ],
+                  if (contract.clientRating != null) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Your rating for client: ${contract.clientRating}/5'),
+                    ),
+                  ],
+                  if (contract.providerRating != null) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Client rating for you: ${contract.providerRating}/5'),
+                    ),
+                  ],
+                  if (contract.reviewText?.trim().isNotEmpty == true) ...[
+                    const SizedBox(height: 4),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text('Client review: ${contract.reviewText}'),
+                    ),
+                  ],
+                  if (contract.status == 'completed' && contract.clientRating == null) ...[
+                    const SizedBox(height: 10),
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: OutlinedButton.icon(
+                        onPressed: () => _rateClientFromHistory(context, ref, contract.id),
+                        icon: const Icon(Icons.star_outline),
+                        label: const Text('Rate Client'),
+                      ),
+                    ),
+                  ],
+                ],
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    for (final bid in pastBids.where((b) => !contractedJobIds.contains(b.jobId))) {
+      widgets.add(
+        Consumer(
+          builder: (context, ref, _) {
+            final jobAsync = ref.watch(jobProvider(bid.jobId));
+            final title = jobAsync.valueOrNull?.title ?? 'Job ${bid.jobId.substring(0, 8)}';
+            return Card(
+              margin: const EdgeInsets.only(bottom: 10),
+              child: ListTile(
+                leading: const Icon(Icons.assignment_outlined),
+                title: Text(title),
+                subtitle: Text('Bid • ${_statusLabel(bid.status)}'),
+                trailing: Text(Formatters.formatDate(bid.updatedAt)),
+              ),
+            );
+          },
+        ),
+      );
+    }
+
+    return widgets;
+  }
+
+  String _statusLabel(String status) {
+    return switch (status) {
+      'completed' => 'Completed',
+      'terminated' => 'Terminated',
+      'rejected' => 'Rejected',
+      'cancelled' => 'Cancelled',
+      _ => status,
+    };
   }
 
   Widget _statRow(String label, String value) {
@@ -701,6 +837,59 @@ class _ProviderProfileScreenState extends ConsumerState<ProviderProfileScreen> {
       if (!context.mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Failed to delete past work: $e')),
+      );
+    }
+  }
+
+  Future<void> _rateClientFromHistory(
+    BuildContext context,
+    WidgetRef ref,
+    String contractId,
+  ) async {
+    var selectedRating = 5;
+    final submitted = await showDialog<bool>(
+          context: context,
+          builder: (context) => StatefulBuilder(
+            builder: (context, setDialogState) => AlertDialog(
+              title: const Text('Rate Client'),
+              content: Wrap(
+                spacing: 4,
+                children: List.generate(5, (index) {
+                  final star = index + 1;
+                  return IconButton(
+                    onPressed: () => setDialogState(() => selectedRating = star),
+                    icon: Icon(
+                      star <= selectedRating ? Icons.star : Icons.star_border,
+                      color: const Color(0xFFCA8A04),
+                    ),
+                  );
+                }),
+              ),
+              actions: [
+                TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+                FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit')),
+              ],
+            ),
+          ),
+        ) ??
+        false;
+
+    if (!submitted) return;
+
+    try {
+      await ref.read(
+        addProviderRatingProvider((contractId: contractId, rating: selectedRating)).future,
+      );
+      ref.invalidate(providerContractsProvider);
+      ref.invalidate(providerPastContractsProvider);
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Client rating submitted.')),
+      );
+    } catch (e) {
+      if (!context.mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to rate client: $e')),
       );
     }
   }

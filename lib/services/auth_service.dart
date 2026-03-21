@@ -57,13 +57,22 @@ class AuthService {
   /// Sign out the current user
   Future<void> signOut() async {
     try {
-      await supabase.auth.signOut();
+      await supabase.auth.signOut(scope: SignOutScope.local);
     } catch (e) {
       AppLogger.logError('Sign out failed', e);
       throw AppAuthException(
         message: 'Sign out failed: $e',
         originalException: e,
       );
+    }
+  }
+
+  /// Best-effort local sign-out without surfacing errors (used before account switch).
+  Future<void> signOutSilently() async {
+    try {
+      await supabase.auth.signOut(scope: SignOutScope.local);
+    } catch (_) {
+      // Ignore: this is only to clear potentially stale local auth cache.
     }
   }
 

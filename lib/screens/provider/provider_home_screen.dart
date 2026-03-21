@@ -50,6 +50,67 @@ class ProviderHomeScreen extends ConsumerWidget {
               currentUserId: userId,
             ),
             const SizedBox(height: 18),
+            // ── Immediate Jobs Section ──
+            jobsAsync.when(
+              loading: () => const SizedBox.shrink(),
+              error: (_, __) => const SizedBox.shrink(),
+              data: (jobs) {
+                final myBids = bidsAsync.valueOrNull ?? const [];
+                final bidJobIds = myBids.map((bid) => bid.jobId).toSet();
+                final immediateJobs = jobs.where((job) {
+                  if (userId == null) return false;
+                  if (job.clientId == userId) return false;
+                  if (bidJobIds.contains(job.id)) return false;
+                  return job.isImmediate && job.status == 'open';
+                }).toList();
+
+                if (immediateJobs.isEmpty) return const SizedBox.shrink();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.bolt, color: Colors.orange.shade800, size: 20),
+                        const SizedBox(width: 6),
+                        Text('Urgent — Immediate Service',
+                            style: Theme.of(context).textTheme.titleMedium),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    ...immediateJobs.map((job) {
+                      final remaining = job.expiresAt != null
+                          ? job.expiresAt!.difference(DateTime.now())
+                          : Duration.zero;
+                      final expired = remaining.isNegative || remaining == Duration.zero;
+                      final timeLabel = expired
+                          ? 'Expired'
+                          : '${remaining.inHours}h ${remaining.inMinutes.remainder(60)}m left';
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        color: Colors.orange.shade50,
+                        child: ListTile(
+                          onTap: () => Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProviderJobDetailScreen(job: job),
+                            ),
+                          ),
+                          leading: Icon(Icons.bolt, color: Colors.orange.shade800),
+                          title: Text(job.title),
+                          subtitle: Text('${job.location} • $timeLabel'),
+                          trailing: Text(
+                            Formatters.formatCurrencyShort(job.budget),
+                            style: const TextStyle(fontWeight: FontWeight.w700),
+                          ),
+                        ),
+                      );
+                    }),
+                    const SizedBox(height: 14),
+                  ],
+                );
+              },
+            ),
             Text('Fresh Opportunities', style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 10),
             _FreshOpportunities(

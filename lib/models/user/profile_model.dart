@@ -11,7 +11,12 @@ class ProfileModel with _$ProfileModel {
     String? phone,
     String? avatarUrl,
     String? lastRole,
+    double? averageRating,
     @Default(false) bool isDeleted,
+    double? latitude,
+    double? longitude,
+    DateTime? locationUpdatedAt,
+    @Default(0) int immReqCnt,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _ProfileModel;

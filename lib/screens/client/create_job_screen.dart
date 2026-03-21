@@ -3,10 +3,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:latlong2/latlong.dart';
 import '../../models/skill_model.dart';
 import '../../providers/job_provider.dart';
+import '../../providers/user_provider.dart' as userp;
 import '../../utils/validators.dart';
 import '../../widgets/common/image_viewer.dart';
+import '../../widgets/common/map_picker_screen.dart';
 
 class CreateJobScreen extends ConsumerStatefulWidget {
   final List<SkillModel> skills;
@@ -28,6 +31,9 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
 
   int? _selectedSkillId;
   bool _submitting = false;
+  bool _isImmediate = false;
+  int _immediateHours = 2;
+  LatLng? _selectedLatLng;
 
   @override
   void dispose() {
@@ -75,9 +81,20 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
       return;
     }
 
+    if (_selectedLatLng == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a location on the map')),
+      );
+      return;
+    }
+
     setState(() => _submitting = true);
 
     try {
+      final DateTime? expiresAt = _isImmediate
+          ? DateTime.now().add(Duration(hours: _immediateHours))
+          : null;
+
       await ref.read(
         createJobProvider(
           (
@@ -88,6 +105,10 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
             skillId: _selectedSkillId!,
             desiredCompletionDays: int.tryParse(_daysCtrl.text.trim()),
             images: _referenceImages,
+            isImmediate: _isImmediate,
+            expiresAt: expiresAt,
+            jobLat: _selectedLatLng!.latitude,
+            jobLng: _selectedLatLng!.longitude,
           ),
         ).future,
       );
@@ -108,6 +129,9 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final profile = ref.watch(userp.currentUserProvider).valueOrNull;
+    final immediateLeft = profile?.immReqCnt ?? 0;
+
     return Scaffold(
       appBar: AppBar(title: const Text('Post New Job')),
       body: SingleChildScrollView(
@@ -149,7 +173,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<int>(
-                value: _selectedSkillId,
+                initialValue: _selectedSkillId,
                 isExpanded: true,
                 decoration: const InputDecoration(
                   labelText: 'Skill/Category',
@@ -204,11 +228,35 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
               TextFormField(
                 controller: _locationCtrl,
                 decoration: const InputDecoration(
-                  labelText: 'Location',
+                  labelText: 'Location (area / landmark)',
                   prefixIcon: Icon(Icons.location_on_outlined),
                 ),
                 validator: (value) =>
                     value == null || value.trim().isEmpty ? 'Location is required' : null,
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: _submitting
+                    ? null
+                    : () async {
+                        final picked = await Navigator.push<LatLng>(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => MapPickerScreen(
+                              initialCenter: _selectedLatLng,
+                            ),
+                          ),
+                        );
+                        if (picked != null) {
+                          setState(() => _selectedLatLng = picked);
+                        }
+                      },
+                icon: const Icon(Icons.map_outlined),
+                label: Text(
+                  _selectedLatLng != null
+                      ? 'Location: ${_selectedLatLng!.latitude.toStringAsFixed(4)}, ${_selectedLatLng!.longitude.toStringAsFixed(4)}'
+                      : 'Pick Location on Map',
+                ),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -219,6 +267,51 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                   prefixIcon: Icon(Icons.calendar_today_outlined),
                 ),
               ),
+              const SizedBox(height: 18),
+              Text(
+                'Immediate Service',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 6),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text('Request Immediate Service'),
+                subtitle: Text(
+                  'Nearby providers will be notified instantly and your post will auto-expire. Remaining: $immediateLeft',
+                ),
+                value: _isImmediate,
+                onChanged: (_submitting || immediateLeft <= 0)
+                    ? null
+                    : (v) => setState(() => _isImmediate = v),
+              ),
+              if (immediateLeft <= 0)
+                const Text(
+                  'Immediate request balance exhausted. Post a normal request or wait for reset.',
+                  style: TextStyle(fontSize: 12, color: Colors.redAccent),
+                ),
+              if (_isImmediate) ...[
+                const SizedBox(height: 6),
+                Row(
+                  children: [
+                    const Icon(Icons.timer_outlined, size: 20),
+                    const SizedBox(width: 8),
+                    const Text('Expires in'),
+                    const SizedBox(width: 12),
+                    DropdownButton<int>(
+                      value: _immediateHours,
+                      items: [1, 2, 3, 4, 6]
+                          .map((h) => DropdownMenuItem(
+                                value: h,
+                                child: Text('$h hour${h > 1 ? 's' : ''}'),
+                              ))
+                          .toList(),
+                      onChanged: (v) {
+                        if (v != null) setState(() => _immediateHours = v);
+                      },
+                    ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 12),
               OutlinedButton.icon(
                 onPressed: _submitting ? null : _pickImages,

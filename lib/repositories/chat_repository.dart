@@ -9,7 +9,11 @@ class ChatRepository {
   final _databaseService = DatabaseService();
 
   dynamic _asIso(dynamic value) {
-    if (value is DateTime) return value.toIso8601String();
+    if (value is DateTime) return value.toUtc().toIso8601String();
+    if (value is String) {
+      final parsed = DateTime.tryParse(value);
+      if (parsed != null) return parsed.toUtc().toIso8601String();
+    }
     return value;
   }
 
@@ -163,19 +167,56 @@ class ChatRepository {
   /// Get user's chats filtered by role
   Future<List<ChatModel>> getUserChats(String userId, {String? role}) async {
     try {
-      final result = await _databaseService.fetchData(
-        table: 'chats',
-        orderBy: 'last_message_at',
-        descending: true,
-      );
-
-      final userChats = result.where((chat) {
-        final clientId = chat['client_id'] as String?;
-        final providerId = chat['provider_id'] as String?;
-        if (role == 'client') return clientId == userId;
-        if (role == 'provider') return providerId == userId;
-        return clientId == userId || providerId == userId;
-      }).toList();
+      List<Map<String, dynamic>> userChats;
+      if (role == 'client') {
+        userChats = await _databaseService.fetchData(
+          table: 'chats',
+          filters: {'client_id': userId},
+          orderBy: 'last_message_at',
+          descending: true,
+        );
+      } else if (role == 'provider') {
+        userChats = await _databaseService.fetchData(
+          table: 'chats',
+          filters: {'provider_id': userId},
+          orderBy: 'last_message_at',
+          descending: true,
+        );
+      } else {
+        final rows = await Future.wait([
+          _databaseService.fetchData(
+            table: 'chats',
+            filters: {'client_id': userId},
+            orderBy: 'last_message_at',
+            descending: true,
+          ),
+          _databaseService.fetchData(
+            table: 'chats',
+            filters: {'provider_id': userId},
+            orderBy: 'last_message_at',
+            descending: true,
+          ),
+        ]);
+        final combined = [...rows[0], ...rows[1]];
+        final seen = <String>{};
+        userChats = combined.where((chat) {
+          final id = chat['id'] as String?;
+          if (id == null || seen.contains(id)) return false;
+          seen.add(id);
+          return true;
+        }).toList();
+        userChats.sort((a, b) {
+          final aRaw = a['last_message_at'];
+          final bRaw = b['last_message_at'];
+          final aDt = aRaw == null
+              ? DateTime.fromMillisecondsSinceEpoch(0)
+              : DateTime.tryParse(aRaw.toString()) ?? DateTime.fromMillisecondsSinceEpoch(0);
+          final bDt = bRaw == null
+              ? DateTime.fromMillisecondsSinceEpoch(0)
+              : DateTime.tryParse(bRaw.toString()) ?? DateTime.fromMillisecondsSinceEpoch(0);
+          return bDt.compareTo(aDt);
+        });
+      }
 
       final mapped = await Future.wait(
         userChats.map((row) async => ChatModel.fromJson(await _mapChatRow(row))),
@@ -220,10 +261,53 @@ class ChatRepository {
 
       final message = MessageModel.fromJson(_mapMessageRow(result));
 
+      final nowIso = DateTime.now().toUtc().toIso8601String();
+      if (chatRows.isNotEmpty) {
+        final chat = chatRows.first;
+        final contractId = chat['contract_id'] as String?;
+        final clientId = chat['client_id'] as String?;
+        final providerId = chat['provider_id'] as String?;
+
+        if (contractId != null) {
+          final contractRows = await _databaseService.fetchData(
+            table: 'contracts',
+            select: 'first_client_message_at,first_provider_response_at,response_due_at',
+            filters: {'id': contractId},
+          );
+
+          if (contractRows.isNotEmpty) {
+            final contract = contractRows.first;
+            final firstClient = contract['first_client_message_at'];
+            final firstProvider = contract['first_provider_response_at'];
+
+            if (senderId == clientId && firstClient == null) {
+              await _databaseService.updateData(
+                table: 'contracts',
+                id: contractId,
+                data: {
+                  'first_client_message_at': nowIso,
+                  'response_due_at': DateTime.now().toUtc().add(const Duration(hours: 30)).toIso8601String(),
+                },
+              );
+            }
+
+            if (senderId == providerId && firstClient != null && firstProvider == null) {
+              await _databaseService.updateData(
+                table: 'contracts',
+                id: contractId,
+                data: {
+                  'first_provider_response_at': nowIso,
+                },
+              );
+            }
+          }
+        }
+      }
+
       // Update chat's last_message_at
       await _databaseService.updateData(
         table: 'chats',
-        data: {'last_message_at': DateTime.now().toIso8601String()},
+        data: {'last_message_at': DateTime.now().toUtc().toIso8601String()},
         id: chatId,
       );
 
@@ -280,11 +364,10 @@ class ChatRepository {
   Future<void> markChatAsRead(String chatId, String userId) async {
     try {
       final messages = await getChatMessages(chatId);
-      for (final message in messages) {
-        if (!message.isRead && message.senderId != userId) {
-          await markMessageAsRead(message.id);
-        }
-      }
+      final unreadFromOthers = messages
+          .where((message) => !message.isRead && message.senderId != userId)
+          .map((message) => markMessageAsRead(message.id));
+      await Future.wait(unreadFromOthers);
     } catch (e) {
       AppLogger.logError('Mark chat as read failed for chatId: $chatId', e);
       throw AppException(
@@ -359,25 +442,29 @@ class ChatRepository {
       // Fetch both participant names for display
       String clientName = 'Client';
       String providerName = 'Provider';
-      if (clientId != null) {
-        final cRows = await _databaseService.fetchData(
-          table: 'profiles',
-          select: 'full_name',
-          filters: {'id': clientId},
-        );
-        if (cRows.isNotEmpty) {
-          clientName = (cRows.first['full_name'] as String?) ?? 'Client';
-        }
+      final nameLookups = await Future.wait([
+        if (clientId != null)
+          _databaseService.fetchData(
+            table: 'profiles',
+            select: 'full_name',
+            filters: {'id': clientId},
+          )
+        else
+          Future.value(const <Map<String, dynamic>>[]),
+        if (providerId != null)
+          _databaseService.fetchData(
+            table: 'profiles',
+            select: 'full_name',
+            filters: {'id': providerId},
+          )
+        else
+          Future.value(const <Map<String, dynamic>>[]),
+      ]);
+      if (nameLookups[0].isNotEmpty) {
+        clientName = (nameLookups[0].first['full_name'] as String?) ?? 'Client';
       }
-      if (providerId != null) {
-        final pRows = await _databaseService.fetchData(
-          table: 'profiles',
-          select: 'full_name',
-          filters: {'id': providerId},
-        );
-        if (pRows.isNotEmpty) {
-          providerName = (pRows.first['full_name'] as String?) ?? 'Provider';
-        }
+      if (nameLookups[1].isNotEmpty) {
+        providerName = (nameLookups[1].first['full_name'] as String?) ?? 'Provider';
       }
 
       String? jobTitle;
@@ -406,9 +493,11 @@ class ChatRepository {
       DateTime? lastMessageAt = chat.lastMessageAt;
       if (messageRows.isNotEmpty) {
         lastMessage = messageRows.first['content'] as String?;
-        final rawDate = messageRows.first['created_at'] as String?;
+        final rawDate = messageRows.first['created_at'];
         if (rawDate != null) {
-          lastMessageAt = DateTime.tryParse(rawDate)?.toLocal();
+          lastMessageAt = rawDate is DateTime
+              ? rawDate.toUtc()
+              : DateTime.tryParse(rawDate.toString())?.toUtc();
         }
       }
 
@@ -441,16 +530,16 @@ class ChatRepository {
       final chats = await getUserChats(userId, role: role);
       if (chats.isEmpty) return const [];
 
-      final List<ChatOverviewModel> overviews = [];
-      for (final chat in chats) {
-        final overview = await getChatOverview(
-          chatId: chat.id,
-          currentUserId: userId,
-        );
-        if (overview != null) {
-          overviews.add(overview);
-        }
-      }
+      final maybeOverviews = await Future.wait(
+        chats.map(
+          (chat) => getChatOverview(
+            chatId: chat.id,
+            currentUserId: userId,
+          ),
+        ),
+      );
+
+      final overviews = maybeOverviews.whereType<ChatOverviewModel>().toList();
 
       overviews.sort((a, b) {
         final aTime = a.lastMessageAt ?? DateTime.fromMillisecondsSinceEpoch(0);
@@ -480,7 +569,7 @@ class ChatRepository {
       final chatId = chatRows.first['id'] as String;
       await _databaseService.updateData(
         table: 'chats',
-        data: {'closed_at': DateTime.now().toIso8601String()},
+        data: {'closed_at': DateTime.now().toUtc().toIso8601String()},
         id: chatId,
       );
     } catch (e) {

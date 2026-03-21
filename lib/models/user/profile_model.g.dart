@@ -13,7 +13,14 @@ _$ProfileModelImpl _$$ProfileModelImplFromJson(Map<String, dynamic> json) =>
       phone: json['phone'] as String?,
       avatarUrl: json['avatarUrl'] as String?,
       lastRole: json['lastRole'] as String?,
+      averageRating: (json['averageRating'] as num?)?.toDouble(),
       isDeleted: json['isDeleted'] as bool? ?? false,
+      latitude: (json['latitude'] as num?)?.toDouble(),
+      longitude: (json['longitude'] as num?)?.toDouble(),
+      locationUpdatedAt: json['locationUpdatedAt'] == null
+          ? null
+          : DateTime.parse(json['locationUpdatedAt'] as String),
+      immReqCnt: (json['immReqCnt'] as num?)?.toInt() ?? 0,
       createdAt: DateTime.parse(json['createdAt'] as String),
       updatedAt: DateTime.parse(json['updatedAt'] as String),
     );
@@ -25,7 +32,12 @@ Map<String, dynamic> _$$ProfileModelImplToJson(_$ProfileModelImpl instance) =>
       'phone': instance.phone,
       'avatarUrl': instance.avatarUrl,
       'lastRole': instance.lastRole,
+      'averageRating': instance.averageRating,
       'isDeleted': instance.isDeleted,
+      'latitude': instance.latitude,
+      'longitude': instance.longitude,
+      'locationUpdatedAt': instance.locationUpdatedAt?.toIso8601String(),
+      'immReqCnt': instance.immReqCnt,
       'createdAt': instance.createdAt.toIso8601String(),
       'updatedAt': instance.updatedAt.toIso8601String(),
     };

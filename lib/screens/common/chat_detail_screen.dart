@@ -7,8 +7,9 @@ import '../../widgets/common/loading_widget.dart';
 
 class ChatDetailScreen extends ConsumerStatefulWidget {
   final String chatId;
+  final String? initialTitle;
 
-  const ChatDetailScreen({super.key, required this.chatId});
+  const ChatDetailScreen({super.key, required this.chatId, this.initialTitle});
 
   @override
   ConsumerState<ChatDetailScreen> createState() => _ChatDetailScreenState();
@@ -76,19 +77,18 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       appBar: AppBar(
         title: chatOverviewAsync.when(
           data: (chat) {
-            if (chat == null) return const Text('Chat');
+            if (chat == null) {
+              return Text(widget.initialTitle ?? 'Chat');
+            }
             final projectTitle = chat.jobTitle ?? 'Contract Chat';
-            final otherParticipant = chat.otherUserName.trim().isEmpty
-                ? 'Participant'
-                : chat.otherUserName;
             return Text(
-              '$projectTitle | $otherParticipant',
+              projectTitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
             );
           },
-          loading: () => const Text('Chat'),
-          error: (_, __) => const Text('Chat'),
+          loading: () => Text(widget.initialTitle ?? 'Chat'),
+          error: (_, __) => Text(widget.initialTitle ?? 'Chat'),
         ),
       ),
       body: Column(
@@ -124,7 +124,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      'This chat is closed. The contract has been completed.',
+                      'This chat is closed. The contract is no longer active.',
                       style: TextStyle(fontSize: 13, color: Colors.orange.shade800),
                     ),
                   ),
@@ -142,6 +142,11 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               ),
               data: (messages) {
                 if (messages.isEmpty) {
+                  if (isClosed) {
+                    return const Center(
+                      child: Text('This conversation is closed.'),
+                    );
+                  }
                   return const Center(
                     child: Text('No messages yet. Start the conversation.'),
                   );
@@ -158,7 +163,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                     return _MessageBubble(
                       text: msg.content,
                       isMe: isMe,
-                      time: Formatters.formatTime(msg.createdAt.toLocal()),
+                      time: Formatters.formatTime(msg.createdAt),
                     );
                   },
                 );

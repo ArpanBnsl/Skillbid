@@ -11,7 +11,13 @@ class UserRepository {
 
   Map<String, dynamic> _mapProviderProfileRow(Map<String, dynamic> row) {
     dynamic asIso(dynamic value) {
-      if (value is DateTime) return value.toIso8601String();
+      if (value is DateTime) return value.toUtc().toIso8601String();
+      if (value is String) {
+        final parsed = DateTime.tryParse(value);
+        if (parsed != null) {
+          return parsed.toUtc().toIso8601String();
+        }
+      }
       return value;
     }
 
@@ -20,6 +26,9 @@ class UserRepository {
       'bio': row['bio'],
       'experienceYears': (row['experience_years'] as num?)?.toInt() ?? 0,
       'hourlyRate': (row['hourly_rate'] as num?)?.toDouble() ?? 0,
+      'relScore': (row['rel_score'] as num?)?.toDouble() ?? 5.0,
+      'relStreak': (row['rel_streak'] as num?)?.toInt() ?? 0,
+      'isBanned': row['is_banned'] ?? false,
       'verified': row['verified'] ?? false,
       'isDeleted': row['is_deleted'] ?? false,
       'createdAt': asIso(row['created_at']),
@@ -29,7 +38,13 @@ class UserRepository {
 
   Map<String, dynamic> _mapProfileRow(Map<String, dynamic> row) {
     dynamic asIso(dynamic value) {
-      if (value is DateTime) return value.toIso8601String();
+      if (value is DateTime) return value.toUtc().toIso8601String();
+      if (value is String) {
+        final parsed = DateTime.tryParse(value);
+        if (parsed != null) {
+          return parsed.toUtc().toIso8601String();
+        }
+      }
       return value;
     }
 
@@ -39,7 +54,12 @@ class UserRepository {
       'phone': row['phone'],
       'avatarUrl': row['avatar_url'],
       'lastRole': row['last_role'],
+      'averageRating': (row['average_rating'] as num?)?.toDouble(),
       'isDeleted': row['is_deleted'] ?? false,
+      'latitude': (row['latitude'] as num?)?.toDouble(),
+      'longitude': (row['longitude'] as num?)?.toDouble(),
+      'locationUpdatedAt': asIso(row['location_updated_at']),
+      'immReqCnt': (row['imm_req_cnt'] as num?)?.toInt() ?? 0,
       'createdAt': asIso(row['created_at']),
       'updatedAt': asIso(row['updated_at']),
     };
@@ -205,6 +225,28 @@ class UserRepository {
         message: 'Upload avatar failed: $e',
         originalException: e,
       );
+    }
+  }
+
+  /// Update user's current location (lat/lng) in profiles table.
+  Future<void> updateUserLocation({
+    required String userId,
+    required double latitude,
+    required double longitude,
+  }) async {
+    try {
+      await _databaseService.updateData(
+        table: 'profiles',
+        id: userId,
+        data: {
+          'latitude': latitude,
+          'longitude': longitude,
+          'location_updated_at': DateTime.now().toUtc().toIso8601String(),
+        },
+      );
+    } catch (e) {
+      AppLogger.logError('Update user location failed for userId: $userId', e);
+      // Non-fatal: location update failure should not crash the app
     }
   }
 }

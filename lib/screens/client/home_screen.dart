@@ -27,7 +27,7 @@ final clientRecentBidsProvider = FutureProvider<List<ClientRecentBidItem>>((ref)
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return const [];
 
-  final jobs = await ref.read(clientJobsProvider.future);
+  final jobs = await ref.read(clientPostedJobsProvider.future);
   if (jobs.isEmpty) return const [];
 
   final bidRepo = ref.read(bidRepositoryProvider);
@@ -94,6 +94,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
 
       if (posted == true) {
         ref.invalidate(clientJobsProvider);
+        ref.invalidate(clientPostedJobsProvider);
         ref.invalidate(clientRecentBidsProvider);
       }
     } catch (e) {
@@ -107,7 +108,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userp.currentUserProvider);
-    final myJobsAsync = ref.watch(clientJobsProvider);
+    final myJobsAsync = ref.watch(clientPostedJobsProvider);
     final recentBidsAsync = ref.watch(clientRecentBidsProvider);
 
     return Scaffold(
@@ -124,9 +125,10 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(clientJobsProvider);
+          ref.invalidate(clientPostedJobsProvider);
           ref.invalidate(clientRecentBidsProvider);
           await Future.wait([
-            ref.read(clientJobsProvider.future),
+            ref.read(clientPostedJobsProvider.future),
             ref.read(clientRecentBidsProvider.future),
           ]);
         },

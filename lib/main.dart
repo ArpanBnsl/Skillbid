@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'providers/auth_provider.dart';
+import 'providers/user_provider.dart';
 import 'theme/app_theme.dart';
 import 'routes/app_router.dart';
 import 'config/supabase_config.dart';
@@ -20,11 +22,27 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends ConsumerStatefulWidget {
   const MyApp({super.key});
 
   @override
+  ConsumerState<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends ConsumerState<MyApp> {
+  String? _lastLocationSyncUserId;
+
+  @override
   Widget build(BuildContext context) {
+    final userId = ref.watch(currentUserIdProvider);
+    if (userId != null && userId != _lastLocationSyncUserId) {
+      _lastLocationSyncUserId = userId;
+      Future.microtask(() {
+        ref.invalidate(refreshUserLocationProvider);
+        ref.read(refreshUserLocationProvider.future);
+      });
+    }
+
     return MaterialApp.router(
       title: 'SkillBid',
       debugShowCheckedModeBanner: false,
@@ -33,6 +51,3 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
-
-

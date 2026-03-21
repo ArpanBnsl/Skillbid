@@ -1,6 +1,8 @@
 import '../models/job/job_model.dart';
 import '../models/job/job_image_model.dart';
 import '../models/skill_model.dart';
+import '../config/app_constants.dart';
+import 'bid_repository.dart';
 import '../services/database_service.dart';
 import '../services/storage_service.dart';
 import '../utils/exceptions.dart';
@@ -9,10 +11,17 @@ import '../utils/app_logger.dart';
 class JobRepository {
   final _databaseService = DatabaseService();
   final _storageService = StorageService();
+  final _bidRepository = BidRepository();
 
   Map<String, dynamic> _mapJobRow(Map<String, dynamic> row) {
     dynamic asIso(dynamic value) {
-      if (value is DateTime) return value.toIso8601String();
+      if (value is DateTime) return value.toUtc().toIso8601String();
+      if (value is String) {
+        final parsed = DateTime.tryParse(value);
+        if (parsed != null) {
+          return parsed.toUtc().toIso8601String();
+        }
+      }
       return value;
     }
 
@@ -25,8 +34,12 @@ class JobRepository {
       'location': row['location'],
       'skillId': (row['skill_id'] as num?)?.toInt() ?? 0,
       'desiredCompletionDays': (row['desired_completion_days'] as num?)?.toInt(),
-      'status': row['status'] ?? 'open',
+      'status': row['status'] ?? AppConstants.jobStatusOpen,
       'isDeleted': row['is_deleted'] ?? false,
+      'isImmediate': row['is_immediate'] ?? false,
+      'expiresAt': asIso(row['expires_at']),
+      'jobLat': (row['job_lat'] as num?)?.toDouble(),
+      'jobLng': (row['job_lng'] as num?)?.toDouble(),
       'createdAt': asIso(row['created_at']),
       'updatedAt': asIso(row['updated_at']),
     };
@@ -34,7 +47,13 @@ class JobRepository {
 
   Map<String, dynamic> _mapJobImageRow(Map<String, dynamic> row) {
     dynamic asIso(dynamic value) {
-      if (value is DateTime) return value.toIso8601String();
+      if (value is DateTime) return value.toUtc().toIso8601String();
+      if (value is String) {
+        final parsed = DateTime.tryParse(value);
+        if (parsed != null) {
+          return parsed.toUtc().toIso8601String();
+        }
+      }
       return value;
     }
 
@@ -87,20 +106,59 @@ class JobRepository {
     required String location,
     required int skillId,
     int? desiredCompletionDays,
+    bool isImmediate = false,
+    DateTime? expiresAt,
+    double? jobLat,
+    double? jobLng,
   }) async {
     try {
+      final data = <String, dynamic>{
+        'client_id': clientId,
+        'title': title,
+        'description': description,
+        'budget': budget,
+        'location': location,
+        'skill_id': skillId,
+        'desired_completion_days': desiredCompletionDays,
+        'is_immediate': isImmediate,
+      };
+      if (expiresAt != null) data['expires_at'] = expiresAt.toUtc().toIso8601String();
+      if (jobLat != null) data['job_lat'] = jobLat;
+      if (jobLng != null) data['job_lng'] = jobLng;
+
       final result = await _databaseService.insertData(
         table: 'jobs',
-        data: {
-          'client_id': clientId,
-          'title': title,
-          'description': description,
-          'budget': budget,
-          'location': location,
-          'skill_id': skillId,
-          'desired_completion_days': desiredCompletionDays,
-        },
+        data: data,
       );
+
+      // Immediate request quota management (remaining count).
+      if (isImmediate) {
+        try {
+          final profileRows = await _databaseService.fetchData(
+            table: 'profiles',
+            filters: {'id': clientId},
+          );
+          final currentCount = profileRows.isNotEmpty
+              ? (profileRows.first['imm_req_cnt'] as num?)?.toInt() ?? 0
+              : 0;
+
+          if (currentCount <= 0) {
+            throw AppException(
+              message: 'Immediate request quota exhausted. Please post a normal request.',
+            );
+          }
+
+          await _databaseService.updateData(
+            table: 'profiles',
+            id: clientId,
+            data: {'imm_req_cnt': currentCount - 1},
+          );
+        } catch (e) {
+          if (e is AppException) rethrow;
+          // Non-fatal fallback for schema mismatch.
+        }
+      }
+
       return JobModel.fromJson(_mapJobRow(result));
     } catch (e) {
       AppLogger.logError('Create job failed', e);
@@ -108,6 +166,32 @@ class JobRepository {
         message: 'Create job failed: $e',
         originalException: e,
       );
+    }
+  }
+
+  /// Cancel all open immediate jobs that have expired.
+  Future<void> cancelExpiredImmediateJobs() async {
+    try {
+      final rows = await _databaseService.fetchData(
+        table: 'jobs',
+        filters: {
+          'is_immediate': true,
+          'status': AppConstants.jobStatusOpen,
+          'is_deleted': false,
+        },
+      );
+      final now = DateTime.now().toUtc();
+      for (final row in rows) {
+        final expiresAt = row['expires_at'];
+        if (expiresAt == null) continue;
+        final expiry = DateTime.tryParse(expiresAt.toString());
+        if (expiry != null && expiry.isBefore(now)) {
+          await updateJob(jobId: row['id'], status: AppConstants.jobStatusCancelled);
+          await _bidRepository.cancelBidsForJob(row['id']);
+        }
+      }
+    } catch (e) {
+      AppLogger.logError('Cancel expired immediate jobs failed', e);
     }
   }
 
@@ -135,7 +219,7 @@ class JobRepository {
       final result = await _databaseService.fetchData(
         table: 'jobs',
         filters: {
-          'status': 'open',
+          'status': AppConstants.jobStatusOpen,
           'is_deleted': false,
         },
         orderBy: 'created_at',
@@ -184,7 +268,7 @@ class JobRepository {
         table: 'jobs',
         filters: {
           'skill_id': skillId,
-          'status': 'open',
+          'status': AppConstants.jobStatusOpen,
           'is_deleted': false,
         },
         orderBy: 'created_at',
@@ -270,10 +354,15 @@ class JobRepository {
   /// Delete job (soft delete)
   Future<void> deleteJob(String jobId) async {
     try {
-      await _databaseService.softDeleteData(
+      await _databaseService.updateData(
         table: 'jobs',
         id: jobId,
+        data: {
+          'status': AppConstants.jobStatusDeleted,
+          'is_deleted': true,
+        },
       );
+      await _bidRepository.cancelBidsForJob(jobId);
     } catch (e) {
       AppLogger.logError('Delete job failed for jobId: $jobId', e);
       throw AppException(

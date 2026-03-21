@@ -31,8 +31,6 @@ final chatOverviewProvider = FutureProvider.family<ChatOverviewModel?, String>((
   if (userId == null) return null;
 
   final repo = ref.watch(chatRepositoryProvider);
-  final allowed = await repo.isParticipant(chatId: chatId, userId: userId);
-  if (!allowed) return null;
   return repo.getChatOverview(chatId: chatId, currentUserId: userId);
 });
 
@@ -41,8 +39,6 @@ final chatProvider = FutureProvider.family<ChatModel?, String>((ref, chatId) asy
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return null;
   final repo = ref.watch(chatRepositoryProvider);
-  final allowed = await repo.isParticipant(chatId: chatId, userId: userId);
-  if (!allowed) return null;
   return repo.getChatById(chatId);
 });
 
@@ -62,8 +58,6 @@ final chatMessagesProvider = FutureProvider.family<List<MessageModel>, String>((
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return [];
   final repo = ref.watch(chatRepositoryProvider);
-  final allowed = await repo.isParticipant(chatId: chatId, userId: userId);
-  if (!allowed) return [];
   return repo.getChatMessages(chatId);
 });
 

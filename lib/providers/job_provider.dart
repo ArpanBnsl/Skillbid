@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import '../config/app_constants.dart';
 import '../models/skill_model.dart';
 import '../models/job/job_image_model.dart';
 import '../models/job/job_model.dart';
@@ -20,9 +21,11 @@ final skillProvider = FutureProvider.family<SkillModel?, int>((ref, skillId) asy
   return repo.getSkillById(skillId);
 });
 
-/// Get available jobs (open)
+/// Get available jobs (open) – excludes immediate jobs that have expired
 final availableJobsProvider = FutureProvider<List<JobModel>>((ref) async {
   final repo = ref.watch(jobRepositoryProvider);
+  // Also clean up expired immediate jobs on the fly
+  await repo.cancelExpiredImmediateJobs();
   return repo.getAvailableJobs();
 });
 
@@ -33,6 +36,22 @@ final clientJobsProvider = FutureProvider<List<JobModel>>((ref) async {
   
   final repo = ref.watch(jobRepositoryProvider);
   return repo.getClientJobs(userId);
+});
+
+final clientPostedJobsProvider = FutureProvider<List<JobModel>>((ref) async {
+  final jobs = await ref.watch(clientJobsProvider.future);
+  return jobs.where((job) => job.status == AppConstants.jobStatusOpen).toList();
+});
+
+final clientPastJobsProvider = FutureProvider<List<JobModel>>((ref) async {
+  final jobs = await ref.watch(clientJobsProvider.future);
+  return jobs
+      .where(
+        (job) => job.status == AppConstants.jobStatusCompleted ||
+            job.status == AppConstants.jobStatusCancelled ||
+            job.status == AppConstants.jobStatusDeleted,
+      )
+      .toList();
 });
 
 /// Get jobs by skill
@@ -54,7 +73,7 @@ final jobImagesProvider = FutureProvider.family<List<JobImageModel>, String>((re
 });
 
 /// Create job
-final createJobProvider = FutureProvider.family<JobModel, ({String title, String description, double budget, String location, int skillId, int? desiredCompletionDays, List<XFile> images})>((ref, params) async {
+final createJobProvider = FutureProvider.family<JobModel, ({String title, String description, double budget, String location, int skillId, int? desiredCompletionDays, List<XFile> images, bool isImmediate, DateTime? expiresAt, double? jobLat, double? jobLng})>((ref, params) async {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) throw Exception('User not authenticated');
   
@@ -67,6 +86,10 @@ final createJobProvider = FutureProvider.family<JobModel, ({String title, String
     location: params.location,
     skillId: params.skillId,
     desiredCompletionDays: params.desiredCompletionDays,
+    isImmediate: params.isImmediate,
+    expiresAt: params.expiresAt,
+    jobLat: params.jobLat,
+    jobLng: params.jobLng,
   );
 
   for (final image in params.images.take(4)) {
@@ -75,6 +98,8 @@ final createJobProvider = FutureProvider.family<JobModel, ({String title, String
   
   // Refresh client jobs
   ref.invalidate(clientJobsProvider);
+  ref.invalidate(clientPostedJobsProvider);
+  ref.invalidate(clientPastJobsProvider);
   ref.invalidate(availableJobsProvider);
   ref.invalidate(jobImagesProvider(job.id));
   
@@ -94,6 +119,8 @@ final updateJobProvider = FutureProvider.family<void, ({String jobId, String? ti
   // Refresh job data
   ref.invalidate(jobProvider(params.jobId));
   ref.invalidate(clientJobsProvider);
+  ref.invalidate(clientPostedJobsProvider);
+  ref.invalidate(clientPastJobsProvider);
   ref.invalidate(availableJobsProvider);
 });
 
@@ -104,5 +131,7 @@ final deleteJobProvider = FutureProvider.family<void, String>((ref, jobId) async
   
   // Refresh jobs list
   ref.invalidate(clientJobsProvider);
+  ref.invalidate(clientPostedJobsProvider);
+  ref.invalidate(clientPastJobsProvider);
   ref.invalidate(availableJobsProvider);
 });

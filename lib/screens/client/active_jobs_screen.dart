@@ -19,8 +19,6 @@ class ClientActiveJobsScreen extends ConsumerStatefulWidget {
 
 class _ClientActiveJobsScreenState extends ConsumerState<ClientActiveJobsScreen> with SingleTickerProviderStateMixin {
   late final TabController _tabController;
-  String _jobStatusFilter = 'all';
-  String _contractStatusFilter = 'all';
 
   @override
   void initState() {
@@ -36,8 +34,8 @@ class _ClientActiveJobsScreenState extends ConsumerState<ClientActiveJobsScreen>
 
   @override
   Widget build(BuildContext context) {
-    final jobsAsync = ref.watch(clientJobsProvider);
-    final contractsAsync = ref.watch(clientContractsProvider);
+    final jobsAsync = ref.watch(clientPostedJobsProvider);
+    final contractsAsync = ref.watch(clientActiveContractsProvider);
 
     return Scaffold(
       appBar: AppBar(
@@ -53,10 +51,12 @@ class _ClientActiveJobsScreenState extends ConsumerState<ClientActiveJobsScreen>
       body: RefreshIndicator(
         onRefresh: () async {
           ref.invalidate(clientJobsProvider);
+          ref.invalidate(clientPostedJobsProvider);
           ref.invalidate(clientContractsProvider);
+          ref.invalidate(clientActiveContractsProvider);
           await Future.wait([
-            ref.read(clientJobsProvider.future),
-            ref.read(clientContractsProvider.future),
+            ref.read(clientPostedJobsProvider.future),
+            ref.read(clientActiveContractsProvider.future),
           ]);
         },
         child: TabBarView(
@@ -66,10 +66,6 @@ class _ClientActiveJobsScreenState extends ConsumerState<ClientActiveJobsScreen>
               loading: () => const LoadingWidget(message: 'Loading posted jobs...'),
               error: (e, _) => _ErrorList(message: 'Failed loading jobs: $e'),
               data: (jobs) {
-                final filteredJobs = jobs.where((job) {
-                  return _jobStatusFilter == 'all' || job.status == _jobStatusFilter;
-                }).toList();
-
                 if (jobs.isEmpty) {
                   return const EmptyStateWidget(
                     message: 'No projects posted yet.',
@@ -79,53 +75,34 @@ class _ClientActiveJobsScreenState extends ConsumerState<ClientActiveJobsScreen>
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _StatusFilterBar(
-                      statuses: const [
-                        ('all', 'All'),
-                        ('open', 'Out For Bid'),
-                        ('in_progress', 'In Progress'),
-                        ('completed', 'Completed'),
-                        ('cancelled', 'Cancelled'),
-                      ],
-                      selected: _jobStatusFilter,
-                      onSelected: (value) => setState(() => _jobStatusFilter = value),
-                    ),
-                    const SizedBox(height: 12),
-                    if (filteredJobs.isEmpty)
-                      const SizedBox(
-                        height: 220,
-                        child: EmptyStateWidget(
-                          message: 'No posted projects match this status.',
-                          icon: Icons.filter_alt_off_outlined,
-                        ),
-                      )
-                    else
-                      ...filteredJobs.map((job) => Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _ProjectCard(
-                              icon: Icons.assignment_outlined,
-                              title: job.title,
-                              subtitle: '${job.location} • ${_statusLabel(job.status)}',
-                              status: job.status,
-                              metaLeft: 'Budget',
-                              metaLeftValue: Formatters.formatCurrencyShort(job.budget),
-                              metaRight: 'Posted',
-                              metaRightValue: Formatters.formatDate(job.createdAt),
-                              onTap: () async {
-                                final changed = await Navigator.push<bool>(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => ClientJobDetailScreen(job: job),
-                                  ),
-                                );
+                    ...jobs.map((job) => Padding(
+                          padding: const EdgeInsets.only(bottom: 10),
+                          child: _ProjectCard(
+                            icon: Icons.assignment_outlined,
+                            title: job.title,
+                            subtitle: '${job.location} • ${_statusLabel(job.status)}',
+                            status: job.status,
+                            metaLeft: 'Budget',
+                            metaLeftValue: Formatters.formatCurrencyShort(job.budget),
+                            metaRight: 'Posted',
+                            metaRightValue: Formatters.formatDate(job.createdAt),
+                            onTap: () async {
+                              final changed = await Navigator.push<bool>(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => ClientJobDetailScreen(job: job),
+                                ),
+                              );
 
-                                if (changed == true) {
-                                  ref.invalidate(clientJobsProvider);
-                                  ref.invalidate(clientContractsProvider);
-                                }
-                              },
-                            ),
-                          )),
+                              if (changed == true) {
+                                ref.invalidate(clientJobsProvider);
+                                ref.invalidate(clientPostedJobsProvider);
+                                ref.invalidate(clientContractsProvider);
+                                ref.invalidate(clientActiveContractsProvider);
+                              }
+                            },
+                          ),
+                        )),
                   ],
                 );
               },
@@ -134,41 +111,16 @@ class _ClientActiveJobsScreenState extends ConsumerState<ClientActiveJobsScreen>
               loading: () => const LoadingWidget(message: 'Loading contracts...'),
               error: (e, _) => _ErrorList(message: 'Failed loading contracts: $e'),
               data: (contracts) {
-                final filteredContracts = contracts.where((contract) {
-                  return _contractStatusFilter == 'all' || contract.status == _contractStatusFilter;
-                }).toList();
-
                 if (contracts.isEmpty) {
                   return const EmptyStateWidget(
-                    message: 'No contracts yet.',
+                    message: 'No active contracts yet.',
                     icon: Icons.handshake_outlined,
                   );
                 }
                 return ListView(
                   padding: const EdgeInsets.all(16),
                   children: [
-                    _StatusFilterBar(
-                      statuses: const [
-                        ('all', 'All'),
-                        ('active', 'Active'),
-                        ('work_submitted', 'Work Submitted'),
-                        ('completed', 'Completed'),
-                        ('cancelled', 'Cancelled'),
-                      ],
-                      selected: _contractStatusFilter,
-                      onSelected: (value) => setState(() => _contractStatusFilter = value),
-                    ),
-                    const SizedBox(height: 12),
-                    if (filteredContracts.isEmpty)
-                      const SizedBox(
-                        height: 220,
-                        child: EmptyStateWidget(
-                          message: 'No contracts match this status.',
-                          icon: Icons.filter_alt_off_outlined,
-                        ),
-                      )
-                    else
-                      ...filteredContracts.map((contract) {
+                    ...contracts.map((contract) {
                         final jobAsync = ref.watch(jobProvider(contract.jobId));
                         final bidAsync = ref.watch(bidProvider(contract.bidId));
                         final providerProfileAsync = ref.watch(userp.userProfileProvider(contract.providerId));
@@ -216,43 +168,10 @@ class _ClientActiveJobsScreenState extends ConsumerState<ClientActiveJobsScreen>
       'open' => 'Out for Bid',
       'in_progress' => 'In Progress',
       'active' => 'Active',
-      'work_submitted' => 'Work Submitted',
       'completed' => 'Completed',
-      'cancelled' => 'Cancelled',
+      'terminated' => 'Terminated',
       _ => status,
     };
-  }
-}
-
-class _StatusFilterBar extends StatelessWidget {
-  final List<(String, String)> statuses;
-  final String selected;
-  final ValueChanged<String> onSelected;
-
-  const _StatusFilterBar({
-    required this.statuses,
-    required this.selected,
-    required this.onSelected,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return SizedBox(
-      height: 38,
-      child: ListView.separated(
-        scrollDirection: Axis.horizontal,
-        itemCount: statuses.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
-        itemBuilder: (context, index) {
-          final (value, label) = statuses[index];
-          return ChoiceChip(
-            label: Text(label),
-            selected: selected == value,
-            onSelected: (_) => onSelected(value),
-          );
-        },
-      ),
-    );
   }
 }
 
@@ -362,9 +281,8 @@ class _StatusPill extends StatelessWidget {
       'open' => (const Color(0xFFFEF3C7), const Color(0xFF92400E), 'Out For Bid'),
       'in_progress' => (const Color(0xFFDCFCE7), const Color(0xFF166534), 'In Progress'),
       'active' => (const Color(0xFFDCFCE7), const Color(0xFF166534), 'Active'),
-      'work_submitted' => (const Color(0xFFFEF3C7), const Color(0xFF92400E), 'Work Submitted'),
       'completed' => (const Color(0xFFDBEAFE), const Color(0xFF1D4ED8), 'Completed'),
-      'cancelled' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Cancelled'),
+      'terminated' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Terminated'),
       _ => (const Color(0xFFE5E7EB), const Color(0xFF374151), status),
     };
 

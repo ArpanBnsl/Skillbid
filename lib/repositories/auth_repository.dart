@@ -30,6 +30,7 @@ class AuthRepository {
           'id': userId,
           'full_name': fullName,
           'phone': phone,
+          'imm_req_cnt': 5,
         },
       );
 
@@ -50,6 +51,9 @@ class AuthRepository {
     required String password,
   }) async {
     try {
+      // Prevent stale-account bleed by clearing local session before a new login.
+      await _authService.signOutSilently();
+
       final response = await _authService.signIn(
         email: email,
         password: password,

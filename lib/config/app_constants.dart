@@ -6,6 +6,7 @@ class AppConstants {
 
   // Job Status
   static const String jobStatusOpen = 'open';
+  static const String jobStatusDeleted = 'deleted';
   static const String jobStatusInProgress = 'in_progress';
   static const String jobStatusCompleted = 'completed';
   static const String jobStatusCancelled = 'cancelled';
@@ -14,12 +15,14 @@ class AppConstants {
   static const String bidStatusPending = 'pending';
   static const String bidStatusAccepted = 'accepted';
   static const String bidStatusRejected = 'rejected';
-  static const String bidStatusWithdrawn = 'withdrawn';
+  static const String bidStatusCancelled = 'cancelled';
 
   // Contract Status
   static const String contractStatusActive = 'active';
   static const String contractStatusCompleted = 'completed';
-  static const String contractStatusCancelled = 'cancelled';
+  static const String contractStatusTerminated = 'terminated';
+  static const String contractTerminatedByClient = 'client';
+  static const String contractTerminatedByProvider = 'provider';
 
   // Message Type
   static const String messageTypeText = 'text';

@@ -8,8 +8,8 @@ enum ContractStatus {
   active,
   @JsonValue('completed')
   completed,
-  @JsonValue('cancelled')
-  cancelled;
+  @JsonValue('terminated')
+  terminated;
 
   String toJson() => name;
 }
@@ -23,11 +23,18 @@ class ContractModel with _$ContractModel {
     required String clientId,
     required String providerId,
     @Default('active') String status,
+    String? terminatedBy,
     DateTime? startDate,
     DateTime? endDate,
-    int? rating, // 1-5
+    DateTime? workSubmittedAt,
+    int? providerRating,
+    int? clientRating,
     String? reviewText,
     @Default(false) bool isDeleted,
+    double? providerLat,
+    double? providerLng,
+    DateTime? lastLocationUpdate,
+    @Default(false) bool trackingEnabled,
     required DateTime createdAt,
     required DateTime updatedAt,
   }) = _ContractModel;

@@ -27,11 +27,10 @@ class DatabaseService {
       }
 
       // Apply pagination
-      if (limit != null) {
-        query = query.limit(limit);
-      }
       if (offset != null && limit != null) {
         query = query.range(offset, offset + limit - 1);
+      } else if (limit != null) {
+        query = query.limit(limit);
       }
 
       return await query;

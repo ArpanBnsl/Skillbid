@@ -25,6 +25,9 @@ mixin _$ProviderProfileModel {
   String? get bio => throw _privateConstructorUsedError;
   int get experienceYears => throw _privateConstructorUsedError;
   double get hourlyRate => throw _privateConstructorUsedError;
+  double get relScore => throw _privateConstructorUsedError;
+  int get relStreak => throw _privateConstructorUsedError;
+  bool get isBanned => throw _privateConstructorUsedError;
   bool get verified => throw _privateConstructorUsedError;
   bool get isDeleted => throw _privateConstructorUsedError;
   DateTime get createdAt => throw _privateConstructorUsedError;
@@ -52,6 +55,9 @@ abstract class $ProviderProfileModelCopyWith<$Res> {
     String? bio,
     int experienceYears,
     double hourlyRate,
+    double relScore,
+    int relStreak,
+    bool isBanned,
     bool verified,
     bool isDeleted,
     DateTime createdAt,
@@ -81,6 +87,9 @@ class _$ProviderProfileModelCopyWithImpl<
     Object? bio = freezed,
     Object? experienceYears = null,
     Object? hourlyRate = null,
+    Object? relScore = null,
+    Object? relStreak = null,
+    Object? isBanned = null,
     Object? verified = null,
     Object? isDeleted = null,
     Object? createdAt = null,
@@ -104,6 +113,18 @@ class _$ProviderProfileModelCopyWithImpl<
                 ? _value.hourlyRate
                 : hourlyRate // ignore: cast_nullable_to_non_nullable
                       as double,
+            relScore: null == relScore
+                ? _value.relScore
+                : relScore // ignore: cast_nullable_to_non_nullable
+                      as double,
+            relStreak: null == relStreak
+                ? _value.relStreak
+                : relStreak // ignore: cast_nullable_to_non_nullable
+                      as int,
+            isBanned: null == isBanned
+                ? _value.isBanned
+                : isBanned // ignore: cast_nullable_to_non_nullable
+                      as bool,
             verified: null == verified
                 ? _value.verified
                 : verified // ignore: cast_nullable_to_non_nullable
@@ -140,6 +161,9 @@ abstract class _$$ProviderProfileModelImplCopyWith<$Res>
     String? bio,
     int experienceYears,
     double hourlyRate,
+    double relScore,
+    int relStreak,
+    bool isBanned,
     bool verified,
     bool isDeleted,
     DateTime createdAt,
@@ -165,6 +189,9 @@ class __$$ProviderProfileModelImplCopyWithImpl<$Res>
     Object? bio = freezed,
     Object? experienceYears = null,
     Object? hourlyRate = null,
+    Object? relScore = null,
+    Object? relStreak = null,
+    Object? isBanned = null,
     Object? verified = null,
     Object? isDeleted = null,
     Object? createdAt = null,
@@ -188,6 +215,18 @@ class __$$ProviderProfileModelImplCopyWithImpl<$Res>
             ? _value.hourlyRate
             : hourlyRate // ignore: cast_nullable_to_non_nullable
                   as double,
+        relScore: null == relScore
+            ? _value.relScore
+            : relScore // ignore: cast_nullable_to_non_nullable
+                  as double,
+        relStreak: null == relStreak
+            ? _value.relStreak
+            : relStreak // ignore: cast_nullable_to_non_nullable
+                  as int,
+        isBanned: null == isBanned
+            ? _value.isBanned
+            : isBanned // ignore: cast_nullable_to_non_nullable
+                  as bool,
         verified: null == verified
             ? _value.verified
             : verified // ignore: cast_nullable_to_non_nullable
@@ -217,6 +256,9 @@ class _$ProviderProfileModelImpl implements _ProviderProfileModel {
     this.bio,
     this.experienceYears = 0,
     this.hourlyRate = 0,
+    this.relScore = 5.0,
+    this.relStreak = 0,
+    this.isBanned = false,
     this.verified = false,
     this.isDeleted = false,
     required this.createdAt,
@@ -238,6 +280,15 @@ class _$ProviderProfileModelImpl implements _ProviderProfileModel {
   final double hourlyRate;
   @override
   @JsonKey()
+  final double relScore;
+  @override
+  @JsonKey()
+  final int relStreak;
+  @override
+  @JsonKey()
+  final bool isBanned;
+  @override
+  @JsonKey()
   final bool verified;
   @override
   @JsonKey()
@@ -249,7 +300,7 @@ class _$ProviderProfileModelImpl implements _ProviderProfileModel {
 
   @override
   String toString() {
-    return 'ProviderProfileModel(userId: $userId, bio: $bio, experienceYears: $experienceYears, hourlyRate: $hourlyRate, verified: $verified, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt)';
+    return 'ProviderProfileModel(userId: $userId, bio: $bio, experienceYears: $experienceYears, hourlyRate: $hourlyRate, relScore: $relScore, relStreak: $relStreak, isBanned: $isBanned, verified: $verified, isDeleted: $isDeleted, createdAt: $createdAt, updatedAt: $updatedAt)';
   }
 
   @override
@@ -263,6 +314,12 @@ class _$ProviderProfileModelImpl implements _ProviderProfileModel {
                 other.experienceYears == experienceYears) &&
             (identical(other.hourlyRate, hourlyRate) ||
                 other.hourlyRate == hourlyRate) &&
+            (identical(other.relScore, relScore) ||
+                other.relScore == relScore) &&
+            (identical(other.relStreak, relStreak) ||
+                other.relStreak == relStreak) &&
+            (identical(other.isBanned, isBanned) ||
+                other.isBanned == isBanned) &&
             (identical(other.verified, verified) ||
                 other.verified == verified) &&
             (identical(other.isDeleted, isDeleted) ||
@@ -281,6 +338,9 @@ class _$ProviderProfileModelImpl implements _ProviderProfileModel {
     bio,
     experienceYears,
     hourlyRate,
+    relScore,
+    relStreak,
+    isBanned,
     verified,
     isDeleted,
     createdAt,
@@ -311,6 +371,9 @@ abstract class _ProviderProfileModel implements ProviderProfileModel {
     final String? bio,
     final int experienceYears,
     final double hourlyRate,
+    final double relScore,
+    final int relStreak,
+    final bool isBanned,
     final bool verified,
     final bool isDeleted,
     required final DateTime createdAt,
@@ -328,6 +391,12 @@ abstract class _ProviderProfileModel implements ProviderProfileModel {
   int get experienceYears;
   @override
   double get hourlyRate;
+  @override
+  double get relScore;
+  @override
+  int get relStreak;
+  @override
+  bool get isBanned;
   @override
   bool get verified;
   @override
