@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'home_screen.dart';
-import '../common/chat_screen.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../../config/app_constants.dart';
+import '../../config/supabase_config.dart';
+import '../../providers/auth_provider.dart';
+import '../../providers/notification_provider.dart';
+import '../../repositories/notification_repository.dart';
+import '../../services/notification_service.dart';
 import '../common/chat_detail_screen.dart';
+import '../common/chat_screen.dart';
 import 'active_jobs_screen.dart';
+import 'home_screen.dart';
 import 'profile_screen.dart';
 
 class ClientShell extends ConsumerStatefulWidget {
@@ -17,13 +25,21 @@ class ClientShell extends ConsumerStatefulWidget {
   ConsumerState<ClientShell> createState() => _ClientShellState();
 }
 
-class _ClientShellState extends ConsumerState<ClientShell> {
+class _ClientShellState extends ConsumerState<ClientShell>
+    with WidgetsBindingObserver {
   late int _currentIndex;
+  RealtimeChannel? _notifChannel;
 
   @override
   void initState() {
     super.initState();
     _currentIndex = widget.initialIndex;
+    WidgetsBinding.instance.addObserver(this);
+
+    // Start listening for notifications once the widget tree is ready
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _setupNotificationListener();
+    });
 
     if (widget.initialChatId != null) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -38,7 +54,87 @@ class _ClientShellState extends ConsumerState<ClientShell> {
   }
 
   @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _notifChannel?.unsubscribe();
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      // Re-fetch unread count when app returns to foreground
+      ref.invalidate(unreadNotificationCountProvider);
+    }
+  }
+
+  // ---------------------------------------------------------------------------
+  // Realtime: listen for rows inserted into the notifications table
+  // ---------------------------------------------------------------------------
+  void _setupNotificationListener() {
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
+
+    _notifChannel = supabase
+        .channel('client_notifs_$userId')
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'notifications',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: userId,
+          ),
+          callback: _handleIncomingNotification,
+        )
+        .subscribe();
+  }
+
+  void _handleIncomingNotification(PostgresChangePayload payload) {
+    final row = payload.newRecord;
+    final type = row['type'] as String?;
+
+    Map<String, dynamic> parsedData = {};
+    final rawData = row['data'];
+    if (rawData is Map<String, dynamic>) {
+      parsedData = rawData;
+    } else if (rawData is Map) {
+      parsedData = Map<String, dynamic>.from(rawData);
+    }
+
+    // Suppress message notifications when that chat is already open
+    if (type == AppConstants.notifNewMessage) {
+      final chatId = parsedData['chat_id'] as String?;
+      final activeChat = ref.read(activeChatIdProvider);
+      if (chatId != null && chatId == activeChat) {
+        NotificationRepository().markAsRead(row['id'] as String);
+        return;
+      }
+    }
+
+    // Show local system notification
+    NotificationService().show(
+      title: row['title'] as String? ?? 'SkillBid',
+      body: row['body'] as String? ?? '',
+      payload: {
+        ...parsedData,
+        'type': type,
+        'notification_id': row['id'],
+      },
+    );
+
+    // Bump the unread badge
+    ref.invalidate(unreadNotificationCountProvider);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Build
+  // ---------------------------------------------------------------------------
+  @override
   Widget build(BuildContext context) {
+    final unreadCount = ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0;
+
     final screens = [
       const ClientHomeScreen(),
       const ChatScreen(role: 'client'),
@@ -76,11 +172,18 @@ class _ClientShellState extends ConsumerState<ClientShell> {
           backgroundColor: Colors.white,
           selectedItemColor: Colors.teal,
           unselectedItemColor: Colors.grey,
-          items: const [
-            BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-            BottomNavigationBarItem(icon: Icon(Icons.chat), label: 'Chat'),
-            BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Projects'),
-            BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+          items: [
+            const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            BottomNavigationBarItem(
+              icon: Badge(
+                isLabelVisible: unreadCount > 0,
+                label: Text('$unreadCount', style: const TextStyle(fontSize: 10)),
+                child: const Icon(Icons.chat),
+              ),
+              label: 'Chat',
+            ),
+            const BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Projects'),
+            const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
       ),

@@ -17,7 +17,11 @@ class AppRouter {
   static const String clientShellRoute = '/client';
   static const String providerShellRoute = '/provider';
 
+  /// Global navigator key used by NotificationService for deep-link navigation.
+  static final navigatorKey = GlobalKey<NavigatorState>();
+
   static final GoRouter router = GoRouter(
+    navigatorKey: navigatorKey,
     initialLocation: splashRoute,
     routes: [
       GoRoute(
@@ -42,11 +46,21 @@ class AppRouter {
       ),
       GoRoute(
         path: clientShellRoute,
-        builder: (context, state) => const ClientShell(),
+        builder: (context, state) {
+          final chatId = state.uri.queryParameters['chatId'];
+          final tab =
+              int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+          return ClientShell(initialIndex: tab, initialChatId: chatId);
+        },
       ),
       GoRoute(
         path: providerShellRoute,
-        builder: (context, state) => const ProviderShell(),
+        builder: (context, state) {
+          final chatId = state.uri.queryParameters['chatId'];
+          final tab =
+              int.tryParse(state.uri.queryParameters['tab'] ?? '') ?? 0;
+          return ProviderShell(initialIndex: tab, initialChatId: chatId);
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

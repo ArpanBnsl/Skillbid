@@ -29,6 +29,15 @@ class AppConstants {
   // Pagination
   static const int pageSize = 20;
 
+  // Notification Types
+  static const String notifNewBid = 'new_bid';
+  static const String notifBidApproved = 'bid_approved_confirmation';
+  static const String notifNewMessage = 'new_message';
+  static const String notifStatusChange = 'status_change';
+  static const String notifProjectCompleted = 'project_completed';
+  static const String notifNewJob = 'new_job';
+  static const String notifProposalAccepted = 'proposal_accepted';
+
   // Supabase Storage
   static const String storageBucketJobs = 'job-images';
   static const String storageBucketPortfolio = 'portfolio-images';

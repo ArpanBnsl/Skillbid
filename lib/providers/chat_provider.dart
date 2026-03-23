@@ -1,9 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../config/app_constants.dart';
 import '../models/chat/chat_model.dart';
 import '../models/chat/chat_overview_model.dart';
 import '../models/chat/message_model.dart';
 import '../repositories/chat_repository.dart';
+import '../services/database_service.dart';
 import 'auth_provider.dart';
+import 'notification_provider.dart';
 
 final chatRepositoryProvider = Provider((ref) => ChatRepository());
 
@@ -11,7 +14,7 @@ final chatRepositoryProvider = Provider((ref) => ChatRepository());
 final userChatsProvider = FutureProvider.family<List<ChatModel>, String?>((ref, role) async {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return [];
-  
+
   final repo = ref.watch(chatRepositoryProvider);
   return repo.getUserChats(userId, role: role);
 });
@@ -75,20 +78,20 @@ final createChatProvider = FutureProvider.family<ChatModel, ({String contractId,
     clientId: params.clientId,
     providerId: params.providerId,
   );
-  
+
   // Refresh user's chats
   ref.invalidate(userChatsProvider);
   ref.invalidate(userChatOverviewsProvider);
   ref.invalidate(chatByContractProvider(params.contractId));
-  
+
   return chat;
 });
 
-/// Send message
+/// Send message — also notifies the other participant.
 final sendMessageProvider = FutureProvider.family<MessageModel, ({String chatId, String content, String messageType})>((ref, params) async {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) throw Exception('User not authenticated');
-  
+
   final repo = ref.watch(chatRepositoryProvider);
   final allowed = await repo.isParticipant(chatId: params.chatId, userId: userId);
   if (!allowed) throw Exception('You are not a participant in this chat');
@@ -98,13 +101,71 @@ final sendMessageProvider = FutureProvider.family<MessageModel, ({String chatId,
     content: params.content,
     messageType: params.messageType,
   );
-  
+
   // Refresh messages
   ref.invalidate(chatMessagesProvider(params.chatId));
   ref.invalidate(userChatsProvider);
   ref.invalidate(userChatOverviewsProvider);
   ref.invalidate(chatOverviewProvider(params.chatId));
-  
+
+  // ── Notification: tell the other participant about the new message ──
+  try {
+    final db = DatabaseService();
+    final chatRows = await db.fetchData(
+      table: 'chats',
+      select: 'client_id,provider_id,contract_id',
+      filters: {'id': params.chatId},
+    );
+    if (chatRows.isNotEmpty) {
+      final clientId = chatRows.first['client_id'] as String?;
+      final providerId = chatRows.first['provider_id'] as String?;
+      final recipientId = (clientId == userId) ? providerId : clientId;
+      final recipientRole = (recipientId == clientId) ? 'client' : 'provider';
+
+      if (recipientId != null) {
+        // Try to resolve job title for a richer notification
+        String? jobTitle;
+        final contractId = chatRows.first['contract_id'] as String?;
+        if (contractId != null) {
+          final contractRows = await db.fetchData(
+            table: 'contracts',
+            select: 'job_id',
+            filters: {'id': contractId},
+          );
+          if (contractRows.isNotEmpty) {
+            final jobId = contractRows.first['job_id'] as String?;
+            if (jobId != null) {
+              final jobRows = await db.fetchData(
+                table: 'jobs',
+                select: 'title',
+                filters: {'id': jobId},
+              );
+              if (jobRows.isNotEmpty) {
+                jobTitle = jobRows.first['title'] as String?;
+              }
+            }
+          }
+        }
+
+        final preview = params.content.length > 80
+            ? '${params.content.substring(0, 80)}...'
+            : params.content;
+
+        final notifRepo = ref.read(notificationRepositoryProvider);
+        await notifRepo.createNotification(
+          userId: recipientId,
+          type: AppConstants.notifNewMessage,
+          title: jobTitle != null ? 'Message - $jobTitle' : 'New Message',
+          body: preview,
+          data: {
+            'chat_id': params.chatId,
+            'role': recipientRole,
+          },
+        );
+      }
+    }
+  } catch (_) {}
+
   return message;
 });
 
@@ -118,10 +179,10 @@ final markMessageAsReadProvider = FutureProvider.family<void, String>((ref, mess
 final markChatAsReadProvider = FutureProvider.family<void, String>((ref, chatId) async {
   final userId = ref.watch(currentUserIdProvider);
   if (userId == null) return;
-  
+
   final repo = ref.watch(chatRepositoryProvider);
   await repo.markChatAsRead(chatId, userId);
-  
+
   // Refresh messages
   ref.invalidate(chatMessagesProvider(chatId));
   ref.invalidate(userChatOverviewsProvider);

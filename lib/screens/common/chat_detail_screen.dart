@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../providers/notification_provider.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/loading_widget.dart';
 
@@ -20,7 +21,22 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
   bool _sending = false;
 
   @override
+  void initState() {
+    super.initState();
+    // Mark this chat as the active one so message notifications are suppressed
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        ref.read(activeChatIdProvider.notifier).state = widget.chatId;
+      }
+    });
+  }
+
+  @override
   void dispose() {
+    // Clear active chat so notifications resume for this chat
+    try {
+      ref.read(activeChatIdProvider.notifier).state = null;
+    } catch (_) {}
     _msgCtrl.dispose();
     _scrollCtrl.dispose();
     super.dispose();
