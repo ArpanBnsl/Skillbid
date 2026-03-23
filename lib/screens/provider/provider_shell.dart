@@ -6,6 +6,9 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_constants.dart';
 import '../../config/supabase_config.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/chat_provider.dart';
+import '../../providers/contract_provider.dart';
+import '../../providers/job_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../repositories/notification_repository.dart';
 import '../../services/notification_service.dart';
@@ -29,7 +32,7 @@ class _ProviderShellState extends ConsumerState<ProviderShell>
     with WidgetsBindingObserver {
   late int _currentIndex;
   RealtimeChannel? _notifChannel;
-  RealtimeChannel? _jobChannel;
+  RealtimeChannel? _dataChannel;
 
   @override
   void initState() {
@@ -39,7 +42,7 @@ class _ProviderShellState extends ConsumerState<ProviderShell>
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupNotificationListener();
-      _setupNewJobListener();
+      _setupDataListener();
     });
 
     if (widget.initialChatId != null) {
@@ -58,19 +61,26 @@ class _ProviderShellState extends ConsumerState<ProviderShell>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _notifChannel?.unsubscribe();
-    _jobChannel?.unsubscribe();
+    _dataChannel?.unsubscribe();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      ref.invalidate(unreadNotificationCountProvider);
+      _refreshAll();
     }
   }
 
+  void _refreshAll() {
+    ref.invalidate(unreadNotificationCountProvider);
+    ref.invalidate(availableJobsProvider);
+    ref.invalidate(providerContractsProvider);
+    ref.invalidate(userChatOverviewsProvider('provider'));
+  }
+
   // ---------------------------------------------------------------------------
-  // Realtime: personal notification channel
+  // Realtime: push notifications channel (filtered to this user)
   // ---------------------------------------------------------------------------
   void _setupNotificationListener() {
     final userId = ref.read(currentUserIdProvider);
@@ -104,7 +114,6 @@ class _ProviderShellState extends ConsumerState<ProviderShell>
       parsedData = Map<String, dynamic>.from(rawData);
     }
 
-    // Suppress message notification when that chat is already open
     if (type == AppConstants.notifNewMessage) {
       final chatId = parsedData['chat_id'] as String?;
       final activeChat = ref.read(activeChatIdProvider);
@@ -128,24 +137,77 @@ class _ProviderShellState extends ConsumerState<ProviderShell>
   }
 
   // ---------------------------------------------------------------------------
-  // Realtime: broadcast channel for new open jobs
+  // Realtime: data sync channel — one channel, all tables the provider cares about
   // ---------------------------------------------------------------------------
-  void _setupNewJobListener() {
+  void _setupDataListener() {
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) return;
 
-    _jobChannel = supabase
-        .channel('new_open_jobs')
+    _dataChannel = supabase
+        .channel('provider_data_$userId')
+        // ── New messages → refresh chat ──
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'messages',
+          callback: (payload) {
+            if (!mounted) return;
+            final chatId = payload.newRecord['chat_id'] as String?;
+            if (chatId != null) {
+              ref.invalidate(chatMessagesProvider(chatId));
+            }
+            ref.invalidate(userChatOverviewsProvider('provider'));
+          },
+        )
+        // ── Chat updated ──
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'chats',
+          callback: (payload) {
+            if (!mounted) return;
+            final chatId = payload.newRecord['id'] as String?;
+            if (chatId != null) {
+              ref.invalidate(chatOverviewProvider(chatId));
+            }
+            ref.invalidate(userChatOverviewsProvider('provider'));
+          },
+        )
+        // ── Contract created or status changed ──
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'contracts',
+          callback: (payload) {
+            if (!mounted) return;
+            final record = payload.newRecord.isNotEmpty
+                ? payload.newRecord
+                : payload.oldRecord;
+            final contractId = record['id'] as String?;
+            final jobId = record['job_id'] as String?;
+            if (contractId != null) {
+              ref.invalidate(contractProvider(contractId));
+            }
+            if (jobId != null) {
+              ref.invalidate(contractByJobProvider(jobId));
+              ref.invalidate(jobProvider(jobId));
+            }
+            ref.invalidate(providerContractsProvider);
+          },
+        )
+        // ── New job posted → refresh available jobs list + show notification ──
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
           table: 'jobs',
-          callback: (PostgresChangePayload payload) {
+          callback: (payload) {
+            if (!mounted) return;
             final newJob = payload.newRecord;
             final status = newJob['status'] as String?;
             final clientId = newJob['client_id'] as String?;
 
-            // Only notify about open jobs that aren't the user's own
+            ref.invalidate(availableJobsProvider);
+
             if (status == AppConstants.jobStatusOpen && clientId != userId) {
               NotificationService().show(
                 title: 'New Project Available',
@@ -157,6 +219,20 @@ class _ProviderShellState extends ConsumerState<ProviderShell>
                 },
               );
             }
+          },
+        )
+        // ── Job status updated (e.g., in_progress, completed) ──
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'jobs',
+          callback: (payload) {
+            if (!mounted) return;
+            final jobId = payload.newRecord['id'] as String?;
+            if (jobId != null) {
+              ref.invalidate(jobProvider(jobId));
+            }
+            ref.invalidate(availableJobsProvider);
           },
         )
         .subscribe();
@@ -198,7 +274,8 @@ class _ProviderShellState extends ConsumerState<ProviderShell>
           backgroundColor: Colors.grey.shade200,
           elevation: 1,
           tooltip: 'Switch to Client',
-          child: const Icon(Icons.swap_horiz, color: Colors.black87, size: 20),
+          child:
+              const Icon(Icons.swap_horiz, color: Colors.black87, size: 20),
         ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,

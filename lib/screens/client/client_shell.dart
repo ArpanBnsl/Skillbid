@@ -6,6 +6,10 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../../config/app_constants.dart';
 import '../../config/supabase_config.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/bid_provider.dart';
+import '../../providers/chat_provider.dart';
+import '../../providers/contract_provider.dart';
+import '../../providers/job_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../repositories/notification_repository.dart';
 import '../../services/notification_service.dart';
@@ -29,6 +33,7 @@ class _ClientShellState extends ConsumerState<ClientShell>
     with WidgetsBindingObserver {
   late int _currentIndex;
   RealtimeChannel? _notifChannel;
+  RealtimeChannel? _dataChannel;
 
   @override
   void initState() {
@@ -36,9 +41,9 @@ class _ClientShellState extends ConsumerState<ClientShell>
     _currentIndex = widget.initialIndex;
     WidgetsBinding.instance.addObserver(this);
 
-    // Start listening for notifications once the widget tree is ready
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _setupNotificationListener();
+      _setupDataListener();
     });
 
     if (widget.initialChatId != null) {
@@ -57,19 +62,27 @@ class _ClientShellState extends ConsumerState<ClientShell>
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
     _notifChannel?.unsubscribe();
+    _dataChannel?.unsubscribe();
     super.dispose();
   }
 
   @override
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
-      // Re-fetch unread count when app returns to foreground
-      ref.invalidate(unreadNotificationCountProvider);
+      // Refresh everything when the app comes back to the foreground
+      _refreshAll();
     }
   }
 
+  void _refreshAll() {
+    ref.invalidate(unreadNotificationCountProvider);
+    ref.invalidate(clientJobsProvider);
+    ref.invalidate(clientContractsProvider);
+    ref.invalidate(userChatOverviewsProvider('client'));
+  }
+
   // ---------------------------------------------------------------------------
-  // Realtime: listen for rows inserted into the notifications table
+  // Realtime: push notifications channel (filtered to this user)
   // ---------------------------------------------------------------------------
   void _setupNotificationListener() {
     final userId = ref.read(currentUserIdProvider);
@@ -103,7 +116,6 @@ class _ClientShellState extends ConsumerState<ClientShell>
       parsedData = Map<String, dynamic>.from(rawData);
     }
 
-    // Suppress message notifications when that chat is already open
     if (type == AppConstants.notifNewMessage) {
       final chatId = parsedData['chat_id'] as String?;
       final activeChat = ref.read(activeChatIdProvider);
@@ -113,7 +125,6 @@ class _ClientShellState extends ConsumerState<ClientShell>
       }
     }
 
-    // Show local system notification
     NotificationService().show(
       title: row['title'] as String? ?? 'SkillBid',
       body: row['body'] as String? ?? '',
@@ -124,8 +135,82 @@ class _ClientShellState extends ConsumerState<ClientShell>
       },
     );
 
-    // Bump the unread badge
     ref.invalidate(unreadNotificationCountProvider);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Realtime: data sync channel — keeps all screens up to date automatically
+  // ---------------------------------------------------------------------------
+  void _setupDataListener() {
+    final userId = ref.read(currentUserIdProvider);
+    if (userId == null) return;
+
+    _dataChannel = supabase
+        .channel('client_data_$userId')
+        // ── New messages → refresh chat list + open chat if visible ──
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'messages',
+          callback: (payload) {
+            if (!mounted) return;
+            final chatId = payload.newRecord['chat_id'] as String?;
+            if (chatId != null) {
+              ref.invalidate(chatMessagesProvider(chatId));
+            }
+            ref.invalidate(userChatOverviewsProvider('client'));
+          },
+        )
+        // ── Chat updated (last_message_at, closed_at) ──
+        .onPostgresChanges(
+          event: PostgresChangeEvent.update,
+          schema: 'public',
+          table: 'chats',
+          callback: (payload) {
+            if (!mounted) return;
+            final chatId = payload.newRecord['id'] as String?;
+            if (chatId != null) {
+              ref.invalidate(chatOverviewProvider(chatId));
+            }
+            ref.invalidate(userChatOverviewsProvider('client'));
+          },
+        )
+        // ── New bid on any of the client's jobs ──
+        .onPostgresChanges(
+          event: PostgresChangeEvent.insert,
+          schema: 'public',
+          table: 'bids',
+          callback: (payload) {
+            if (!mounted) return;
+            final jobId = payload.newRecord['job_id'] as String?;
+            if (jobId != null) {
+              ref.invalidate(jobBidsProvider(jobId));
+            }
+          },
+        )
+        // ── Contract created or status changed ──
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'contracts',
+          callback: (payload) {
+            if (!mounted) return;
+            final record = payload.newRecord.isNotEmpty
+                ? payload.newRecord
+                : payload.oldRecord;
+            final contractId = record['id'] as String?;
+            final jobId = record['job_id'] as String?;
+            if (contractId != null) {
+              ref.invalidate(contractProvider(contractId));
+            }
+            if (jobId != null) {
+              ref.invalidate(contractByJobProvider(jobId));
+              ref.invalidate(jobProvider(jobId));
+            }
+            ref.invalidate(clientContractsProvider);
+          },
+        )
+        .subscribe();
   }
 
   // ---------------------------------------------------------------------------
@@ -133,7 +218,8 @@ class _ClientShellState extends ConsumerState<ClientShell>
   // ---------------------------------------------------------------------------
   @override
   Widget build(BuildContext context) {
-    final unreadCount = ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0;
+    final unreadCount =
+        ref.watch(unreadNotificationCountProvider).valueOrNull ?? 0;
 
     final screens = [
       const ClientHomeScreen(),
@@ -163,7 +249,8 @@ class _ClientShellState extends ConsumerState<ClientShell>
           backgroundColor: Colors.grey.shade200,
           elevation: 1,
           tooltip: 'Switch to Service Provider',
-          child: const Icon(Icons.swap_horiz, color: Colors.black87, size: 20),
+          child:
+              const Icon(Icons.swap_horiz, color: Colors.black87, size: 20),
         ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,
@@ -173,17 +260,21 @@ class _ClientShellState extends ConsumerState<ClientShell>
           selectedItemColor: Colors.teal,
           unselectedItemColor: Colors.grey,
           items: [
-            const BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.home), label: 'Home'),
             BottomNavigationBarItem(
               icon: Badge(
                 isLabelVisible: unreadCount > 0,
-                label: Text('$unreadCount', style: const TextStyle(fontSize: 10)),
+                label: Text('$unreadCount',
+                    style: const TextStyle(fontSize: 10)),
                 child: const Icon(Icons.chat),
               ),
               label: 'Chat',
             ),
-            const BottomNavigationBarItem(icon: Icon(Icons.work), label: 'Projects'),
-            const BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.work), label: 'Projects'),
+            const BottomNavigationBarItem(
+                icon: Icon(Icons.person), label: 'Profile'),
           ],
         ),
       ),
