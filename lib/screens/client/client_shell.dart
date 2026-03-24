@@ -8,6 +8,8 @@ import '../../config/supabase_config.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/bid_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../repositories/bid_repository.dart';
+import '../../repositories/chat_repository.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/notification_provider.dart';
@@ -147,7 +149,7 @@ class _ClientShellState extends ConsumerState<ClientShell>
 
     _dataChannel = supabase
         .channel('client_data_$userId')
-        // ── New messages → refresh chat list + open chat if visible ──
+        // ── New message → inject into notifier (no DB round-trip) ──
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
@@ -156,7 +158,16 @@ class _ClientShellState extends ConsumerState<ClientShell>
             if (!mounted) return;
             final chatId = payload.newRecord['chat_id'] as String?;
             if (chatId != null) {
-              ref.invalidate(chatMessagesProvider(chatId));
+              if (ref.exists(chatMessagesProvider(chatId))) {
+                try {
+                  final msg = ChatRepository.messageFromRawRow(payload.newRecord);
+                  ref.read(chatMessagesProvider(chatId).notifier).appendMessage(msg);
+                } catch (_) {
+                  ref.invalidate(chatMessagesProvider(chatId));
+                }
+              }
+              // If not alive, ChatDetailScreen's own subscription handles it
+              // when the user opens that chat
             }
             ref.invalidate(userChatOverviewsProvider('client'));
           },
@@ -175,7 +186,7 @@ class _ClientShellState extends ConsumerState<ClientShell>
             ref.invalidate(userChatOverviewsProvider('client'));
           },
         )
-        // ── New bid on any of the client's jobs ──
+        // ── New bid → inject if client is viewing that job, otherwise invalidate ──
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
@@ -184,7 +195,15 @@ class _ClientShellState extends ConsumerState<ClientShell>
             if (!mounted) return;
             final jobId = payload.newRecord['job_id'] as String?;
             if (jobId != null) {
-              ref.invalidate(jobBidsProvider(jobId));
+              if (ref.exists(jobBidsProvider(jobId))) {
+                try {
+                  final bid = BidRepository.bidFromRawRow(payload.newRecord);
+                  ref.read(jobBidsProvider(jobId).notifier).prependBid(bid);
+                } catch (_) {
+                  ref.invalidate(jobBidsProvider(jobId));
+                }
+              }
+              // If not alive, build() will fetch fresh data when they navigate there
             }
           },
         )

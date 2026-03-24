@@ -7,6 +7,7 @@ import '../../config/app_constants.dart';
 import '../../config/supabase_config.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../repositories/chat_repository.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/notification_provider.dart';
@@ -145,7 +146,7 @@ class _ProviderShellState extends ConsumerState<ProviderShell>
 
     _dataChannel = supabase
         .channel('provider_data_$userId')
-        // ── New messages → refresh chat ──
+        // ── New message → inject into notifier (no DB round-trip) ──
         .onPostgresChanges(
           event: PostgresChangeEvent.insert,
           schema: 'public',
@@ -154,7 +155,14 @@ class _ProviderShellState extends ConsumerState<ProviderShell>
             if (!mounted) return;
             final chatId = payload.newRecord['chat_id'] as String?;
             if (chatId != null) {
-              ref.invalidate(chatMessagesProvider(chatId));
+              if (ref.exists(chatMessagesProvider(chatId))) {
+                try {
+                  final msg = ChatRepository.messageFromRawRow(payload.newRecord);
+                  ref.read(chatMessagesProvider(chatId).notifier).appendMessage(msg);
+                } catch (_) {
+                  ref.invalidate(chatMessagesProvider(chatId));
+                }
+              }
             }
             ref.invalidate(userChatOverviewsProvider('provider'));
           },

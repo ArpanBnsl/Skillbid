@@ -8,20 +8,67 @@ import 'notification_provider.dart';
 
 final bidRepositoryProvider = Provider((ref) => BidRepository());
 
-/// Get provider's bids
-final providerBidsProvider = FutureProvider<List<BidModel>>((ref) async {
-  final userId = ref.watch(currentUserIdProvider);
-  if (userId == null) return [];
+/// Holds the provider's own bids in memory so new bids can be injected
+/// directly from Realtime payloads — no DB round-trip needed.
+class ProviderBidsNotifier extends AsyncNotifier<List<BidModel>> {
+  @override
+  Future<List<BidModel>> build() async {
+    final userId = ref.watch(currentUserIdProvider);
+    if (userId == null) return [];
+    final repo = ref.watch(bidRepositoryProvider);
+    return repo.getProviderBids(userId);
+  }
 
-  final repo = ref.watch(bidRepositoryProvider);
-  return repo.getProviderBids(userId);
-});
+  void prependBid(BidModel bid) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    if (current.any((b) => b.id == bid.id)) return;
+    state = AsyncData([bid, ...current]);
+  }
 
-/// Get bids for a specific job
-final jobBidsProvider = FutureProvider.family<List<BidModel>, String>((ref, jobId) async {
-  final repo = ref.watch(bidRepositoryProvider);
-  return repo.getJobBids(jobId);
-});
+  void updateBidStatus(String bidId, String status) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(
+      current.map((b) => b.id == bidId ? b.copyWith(status: status) : b).toList(),
+    );
+  }
+}
+
+final providerBidsProvider =
+    AsyncNotifierProvider<ProviderBidsNotifier, List<BidModel>>(
+  ProviderBidsNotifier.new,
+);
+
+/// Holds bids for a specific job in memory so new bids from providers appear
+/// instantly on the client's screen — no DB round-trip needed.
+class JobBidsNotifier extends FamilyAsyncNotifier<List<BidModel>, String> {
+  @override
+  Future<List<BidModel>> build(String jobId) async {
+    final repo = ref.watch(bidRepositoryProvider);
+    return repo.getJobBids(jobId);
+  }
+
+  void prependBid(BidModel bid) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    if (current.any((b) => b.id == bid.id)) return;
+    state = AsyncData([bid, ...current]);
+  }
+
+  void updateBidStatus(String bidId, String status) {
+    final current = state.valueOrNull;
+    if (current == null) return;
+    state = AsyncData(
+      current.map((b) => b.id == bidId ? b.copyWith(status: status) : b).toList(),
+    );
+  }
+}
+
+final jobBidsProvider =
+    AsyncNotifierProvider.family<JobBidsNotifier, List<BidModel>, String>(
+  JobBidsNotifier.new,
+);
 
 /// Get specific bid
 final bidProvider = FutureProvider.family<BidModel?, String>((ref, bidId) async {
@@ -43,9 +90,15 @@ final createBidProvider = FutureProvider.family<BidModel, ({String jobId, double
     message: params.message,
   );
 
-  // Refresh provider's bids
-  ref.invalidate(providerBidsProvider);
-  ref.invalidate(jobBidsProvider(params.jobId));
+  // Inject into providerBidsProvider directly (always alive in IndexedStack).
+  // For jobBidsProvider, only inject if currently alive (client viewing that job);
+  // otherwise invalidate so it re-fetches fresh when they navigate there.
+  ref.read(providerBidsProvider.notifier).prependBid(bid);
+  if (ref.exists(jobBidsProvider(params.jobId))) {
+    ref.read(jobBidsProvider(params.jobId).notifier).prependBid(bid);
+  } else {
+    ref.invalidate(jobBidsProvider(params.jobId));
+  }
 
   // ── Notification: tell the client someone bid on their job ──
   try {
@@ -69,9 +122,7 @@ final createBidProvider = FutureProvider.family<BidModel, ({String jobId, double
 final acceptBidProvider = FutureProvider.family<void, String>((ref, bidId) async {
   final repo = ref.watch(bidRepositoryProvider);
   await repo.updateBidStatus(bidId: bidId, status: 'accepted');
-
-  // Refresh bids
-  ref.invalidate(providerBidsProvider);
+  ref.read(providerBidsProvider.notifier).updateBidStatus(bidId, 'accepted');
   ref.invalidate(bidProvider(bidId));
 });
 
@@ -79,9 +130,7 @@ final acceptBidProvider = FutureProvider.family<void, String>((ref, bidId) async
 final rejectBidProvider = FutureProvider.family<void, String>((ref, bidId) async {
   final repo = ref.watch(bidRepositoryProvider);
   await repo.updateBidStatus(bidId: bidId, status: 'rejected');
-
-  // Refresh bids
-  ref.invalidate(providerBidsProvider);
+  ref.read(providerBidsProvider.notifier).updateBidStatus(bidId, 'rejected');
   ref.invalidate(bidProvider(bidId));
 });
 
@@ -89,9 +138,7 @@ final rejectBidProvider = FutureProvider.family<void, String>((ref, bidId) async
 final withdrawBidProvider = FutureProvider.family<void, String>((ref, bidId) async {
   final repo = ref.watch(bidRepositoryProvider);
   await repo.withdrawBid(bidId);
-
-  // Refresh bids
-  ref.invalidate(providerBidsProvider);
+  ref.read(providerBidsProvider.notifier).updateBidStatus(bidId, 'withdrawn');
   ref.invalidate(bidProvider(bidId));
 });
 

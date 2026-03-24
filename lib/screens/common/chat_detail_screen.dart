@@ -4,6 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../config/supabase_config.dart';
 import '../../providers/auth_provider.dart';
+import '../../repositories/chat_repository.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/notification_provider.dart';
 import '../../utils/formatters.dart';
@@ -64,14 +65,20 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
           ),
           callback: (payload) {
             if (!mounted) return;
-            // Only react to messages sent by the other person
+            // Only react to messages from the other person; our own messages
+            // are already in state via sendMessageProvider.appendMessage.
             final senderId = payload.newRecord['sender_id'] as String?;
             final myId = ref.read(currentUserIdProvider);
-            if (senderId == myId) return; // we already appended our own message
+            if (senderId == myId) return;
 
-            ref.invalidate(chatMessagesProvider(widget.chatId));
-            // Scroll to bottom after re-render
-            Future.delayed(const Duration(milliseconds: 250), () {
+            try {
+              final msg = ChatRepository.messageFromRawRow(payload.newRecord);
+              ref.read(chatMessagesProvider(widget.chatId).notifier).appendMessage(msg);
+            } catch (_) {
+              ref.invalidate(chatMessagesProvider(widget.chatId));
+            }
+            // Scroll to bottom
+            Future.delayed(const Duration(milliseconds: 100), () {
               if (mounted && _scrollCtrl.hasClients) {
                 _scrollCtrl.animateTo(
                   _scrollCtrl.position.maxScrollExtent,
@@ -101,8 +108,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
         ).future,
       );
       _msgCtrl.clear();
-      ref.invalidate(chatMessagesProvider(widget.chatId));
-
+      // Message is already in state via appendMessage in sendMessageProvider.
+      // Just scroll to show it.
       if (!mounted) return;
       await Future.delayed(const Duration(milliseconds: 60));
       if (_scrollCtrl.hasClients) {

@@ -1,3 +1,4 @@
+import '../config/supabase_config.dart';
 import '../models/chat/chat_model.dart';
 import '../models/chat/message_model.dart';
 import '../models/chat/chat_overview_model.dart';
@@ -46,6 +47,21 @@ class ChatRepository {
       'isRead': row['is_read'] ?? false,
       'createdAt': _asIso(row['created_at']),
     };
+  }
+
+  /// Parse a raw Supabase Realtime payload row into a MessageModel.
+  /// Used by shell Realtime callbacks to inject new messages without a DB round-trip.
+  static MessageModel messageFromRawRow(Map<String, dynamic> row) {
+    dynamic asIso(dynamic v) => v is DateTime ? v.toIso8601String() : v;
+    return MessageModel.fromJson({
+      'id': row['id'],
+      'chatId': row['chat_id'],
+      'senderId': row['sender_id'],
+      'content': row['content'],
+      'messageType': row['message_type'] ?? 'text',
+      'isRead': row['is_read'] ?? false,
+      'createdAt': asIso(row['created_at']),
+    });
   }
 
   /// Create chat for contract
@@ -235,6 +251,16 @@ class ChatRepository {
         originalException: e,
       );
     }
+  }
+
+  /// Live stream of messages for a chat — updates in real-time via Supabase Realtime
+  Stream<List<MessageModel>> streamChatMessages(String chatId) {
+    return supabase
+        .from('messages')
+        .stream(primaryKey: ['id'])
+        .eq('chat_id', chatId)
+        .order('created_at', ascending: true)
+        .map((rows) => rows.map((row) => MessageModel.fromJson(_mapMessageRow(row))).toList());
   }
 
   /// Get messages for chat

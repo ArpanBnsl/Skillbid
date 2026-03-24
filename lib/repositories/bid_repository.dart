@@ -1,3 +1,4 @@
+import '../config/supabase_config.dart';
 import '../models/bid_model.dart';
 import '../services/database_service.dart';
 import '../utils/exceptions.dart';
@@ -5,6 +6,24 @@ import '../utils/app_logger.dart';
 
 class BidRepository {
   final _databaseService = DatabaseService();
+
+  /// Parse a raw Supabase Realtime payload row into a BidModel.
+  /// Used by shell Realtime callbacks to inject new bids without a DB round-trip.
+  static BidModel bidFromRawRow(Map<String, dynamic> row) {
+    dynamic asIso(dynamic v) => v is DateTime ? v.toIso8601String() : v;
+    return BidModel.fromJson({
+      'id': row['id'],
+      'jobId': row['job_id'],
+      'providerId': row['provider_id'],
+      'amount': (row['amount'] as num?)?.toDouble() ?? 0,
+      'estimatedDays': (row['estimated_days'] as num?)?.toInt(),
+      'message': row['message'],
+      'status': row['status'] ?? 'pending',
+      'isDeleted': row['is_deleted'] ?? false,
+      'createdAt': asIso(row['created_at']),
+      'updatedAt': asIso(row['updated_at'] ?? row['created_at']),
+    });
+  }
 
   Map<String, dynamic> _mapBidRow(Map<String, dynamic> row) {
     dynamic asIso(dynamic value) {
@@ -91,6 +110,32 @@ class BidRepository {
         originalException: e,
       );
     }
+  }
+
+  /// Live stream of bids for a job — updates in real-time via Supabase Realtime
+  Stream<List<BidModel>> streamJobBids(String jobId) {
+    return supabase
+        .from('bids')
+        .stream(primaryKey: ['id'])
+        .eq('job_id', jobId)
+        .order('created_at', ascending: false)
+        .map((rows) => rows
+            .where((r) => r['is_deleted'] != true)
+            .map((row) => BidModel.fromJson(_mapBidRow(row)))
+            .toList());
+  }
+
+  /// Live stream of a provider's bids — updates in real-time via Supabase Realtime
+  Stream<List<BidModel>> streamProviderBids(String providerId) {
+    return supabase
+        .from('bids')
+        .stream(primaryKey: ['id'])
+        .eq('provider_id', providerId)
+        .order('created_at', ascending: false)
+        .map((rows) => rows
+            .where((r) => r['is_deleted'] != true)
+            .map((row) => BidModel.fromJson(_mapBidRow(row)))
+            .toList());
   }
 
   /// Get bids for a job

@@ -60,15 +60,32 @@ final chatByContractProvider = FutureProvider.family<ChatModel?, String>((ref, c
   return repo.getChatByContractId(contractId);
 });
 
-/// Get messages for chat
-final chatMessagesProvider = FutureProvider.family<List<MessageModel>, String>((ref, chatId) async {
-  final userId = ref.watch(currentUserIdProvider);
-  if (userId == null) return [];
-  final repo = ref.watch(chatRepositoryProvider);
-  final allowed = await repo.isParticipant(chatId: chatId, userId: userId);
-  if (!allowed) return [];
-  return repo.getChatMessages(chatId);
-});
+/// Holds messages for one chat in memory so new messages can be injected
+/// directly from Realtime payloads — no DB round-trip on cross-device updates.
+class ChatMessagesNotifier extends FamilyAsyncNotifier<List<MessageModel>, String> {
+  @override
+  Future<List<MessageModel>> build(String chatId) async {
+    final userId = ref.watch(currentUserIdProvider);
+    if (userId == null) return [];
+    final repo = ref.watch(chatRepositoryProvider);
+    final allowed = await repo.isParticipant(chatId: chatId, userId: userId);
+    if (!allowed) return [];
+    return repo.getChatMessages(chatId);
+  }
+
+  /// Append a message that arrived via Realtime — skips duplicates.
+  void appendMessage(MessageModel message) {
+    final current = state.valueOrNull;
+    if (current == null) return; // still loading; the build() fetch will include it
+    if (current.any((m) => m.id == message.id)) return;
+    state = AsyncData([...current, message]);
+  }
+}
+
+final chatMessagesProvider =
+    AsyncNotifierProvider.family<ChatMessagesNotifier, List<MessageModel>, String>(
+  ChatMessagesNotifier.new,
+);
 
 /// Create chat
 final createChatProvider = FutureProvider.family<ChatModel, ({String contractId, String clientId, String providerId})>((ref, params) async {
@@ -102,8 +119,8 @@ final sendMessageProvider = FutureProvider.family<MessageModel, ({String chatId,
     messageType: params.messageType,
   );
 
-  // Refresh messages
-  ref.invalidate(chatMessagesProvider(params.chatId));
+  // Inject the confirmed message directly — no re-fetch needed
+  ref.read(chatMessagesProvider(params.chatId).notifier).appendMessage(message);
   ref.invalidate(userChatsProvider);
   ref.invalidate(userChatOverviewsProvider);
   ref.invalidate(chatOverviewProvider(params.chatId));
