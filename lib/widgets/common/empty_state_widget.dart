@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 
 class EmptyStateWidget extends StatelessWidget {
   final String message;
@@ -20,12 +22,12 @@ class EmptyStateWidget extends StatelessWidget {
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(icon, size: 64, color: Colors.grey.shade300),
+          Icon(icon, size: 64, color: AppColors.textHint),
           const SizedBox(height: 16),
           Text(
             message,
-            style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-              color: Colors.grey.shade500,
+            style: AppTypography.bodyMedium.copyWith(
+              color: AppColors.textSecondary,
             ),
             textAlign: TextAlign.center,
           ),
@@ -33,7 +35,21 @@ class EmptyStateWidget extends StatelessWidget {
             const SizedBox(height: 24),
             ElevatedButton(
               onPressed: onAction,
-              child: Text(actionLabel!),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                foregroundColor: AppColors.textDark,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
+              ),
+              child: Text(
+                actionLabel!,
+                style: AppTypography.buttonText.copyWith(
+                  color: AppColors.textDark,
+                ),
+              ),
             ),
           ],
         ],

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/job_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/empty_state_widget.dart';
 import '../../widgets/common/loading_widget.dart';
@@ -15,8 +17,16 @@ class ProviderContractsScreen extends ConsumerWidget {
     final contractsAsync = ref.watch(providerContractsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Active Contracts')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: Text('Active Contracts', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: RefreshIndicator(
+        color: AppColors.primaryColor,
+        backgroundColor: AppColors.surfaceLight,
         onRefresh: () async {
           ref.invalidate(providerContractsProvider);
           await ref.read(providerContractsProvider.future);
@@ -28,7 +38,7 @@ class ProviderContractsScreen extends ConsumerWidget {
             children: [
               SizedBox(
                 height: 500,
-                child: Center(child: Text('Failed to load contracts:\n$e', textAlign: TextAlign.center)),
+                child: Center(child: Text('Failed to load contracts:\n$e', textAlign: TextAlign.center, style: TextStyle(color: AppColors.error))),
               ),
             ],
           ),
@@ -71,33 +81,33 @@ class ProviderContractsScreen extends ConsumerWidget {
                   child: Ink(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surfaceLight,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFE4ECEC)),
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: Row(
                       children: [
-                        const CircleAvatar(
-                          backgroundColor: Color(0xFFD7F3F1),
-                          child: Icon(Icons.handshake_outlined, color: Color(0xFF0F766E)),
+                        CircleAvatar(
+                          backgroundColor: AppColors.surfaceVariant,
+                          child: Icon(Icons.handshake_outlined, color: AppColors.primaryColor),
                         ),
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+                              Text(title, style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
                               const SizedBox(height: 6),
-                              Text(_labelStatus(contract.status)),
+                              Text(_labelStatus(contract.status), style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
                               const SizedBox(height: 4),
                               Text(
                                 'Started ${Formatters.formatDate(contract.createdAt)}',
-                                style: TextStyle(color: Colors.grey.shade600),
+                                style: AppTypography.caption.copyWith(color: AppColors.textHint),
                               ),
                             ],
                           ),
                         ),
-                        const Icon(Icons.chevron_right),
+                        Icon(Icons.chevron_right, color: AppColors.textHint),
                       ],
                     ),
                   ),

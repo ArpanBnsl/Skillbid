@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/chat_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/empty_state_widget.dart';
 import '../../widgets/common/loading_widget.dart';
@@ -15,11 +17,16 @@ class ChatScreen extends ConsumerWidget {
     final chatsAsync = ref.watch(userChatOverviewsProvider(role));
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Chats'),
+        title: Text('Chats', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.surface,
         elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
       ),
       body: RefreshIndicator(
+        color: AppColors.primaryColor,
+        backgroundColor: AppColors.surfaceLight,
         onRefresh: () async {
           ref.invalidate(userChatOverviewsProvider(role));
           await ref.read(userChatOverviewsProvider(role).future);
@@ -35,6 +42,7 @@ class ChatScreen extends ConsumerWidget {
                   child: Text(
                     'Failed to load chats:\n$error',
                     textAlign: TextAlign.center,
+                    style: TextStyle(color: AppColors.error),
                   ),
                 ),
               ),
@@ -59,7 +67,7 @@ class ChatScreen extends ConsumerWidget {
             return ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               itemCount: chats.length,
-              separatorBuilder: (_, __) => const Divider(height: 1),
+              separatorBuilder: (_, __) => Divider(height: 1, color: AppColors.divider),
               itemBuilder: (context, index) {
                 final chat = chats[index];
                 final projectTitle = chat.jobTitle ?? 'Contract Chat';
@@ -71,48 +79,64 @@ class ChatScreen extends ConsumerWidget {
                     ? chat.lastMessage!
                   : (chat.isClosed ? 'Conversation closed' : 'No messages yet');
 
-                return ListTile(
-                  isThreeLine: true,
-                  onTap: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (_) => ChatDetailScreen(
-                          chatId: chat.chatId,
-                          initialTitle: title,
+                return Container(
+                  color: AppColors.surfaceLight,
+                  child: ListTile(
+                    isThreeLine: true,
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ChatDetailScreen(
+                            chatId: chat.chatId,
+                            initialTitle: title,
+                          ),
                         ),
+                      );
+                    },
+                    leading: Container(
+                      width: 42,
+                      height: 42,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppColors.accentGradient,
                       ),
-                    );
-                  },
-                  leading: CircleAvatar(
-                    child: Text(_initials(chat.otherUserName)),
-                  ),
-                  title: Text(
-                    title,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                  ),
-                  subtitle: Row(
-                    children: [
-                      if (chat.isClosed) ...[
-                        Icon(Icons.lock_outline, size: 14, color: Colors.grey.shade500),
-                        const SizedBox(width: 4),
-                      ],
-                      Expanded(
+                      child: Center(
                         child: Text(
-                          '$otherParticipant • $subtitle',
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
+                          _initials(chat.otherUserName),
+                          style: AppTypography.labelMedium.copyWith(color: AppColors.textPrimary),
                         ),
                       ),
-                    ],
-                  ),
-                  trailing: chat.lastMessageAt == null
-                      ? null
-                      : Text(
-                          Formatters.formatChatTimestamp(chat.lastMessageAt!),
-                          style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    title: Text(
+                      title,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Row(
+                      children: [
+                        if (chat.isClosed) ...[
+                          Icon(Icons.lock_outline, size: 14, color: AppColors.textHint),
+                          const SizedBox(width: 4),
+                        ],
+                        Expanded(
+                          child: Text(
+                            '$otherParticipant • $subtitle',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                          ),
                         ),
+                      ],
+                    ),
+                    trailing: chat.lastMessageAt == null
+                        ? null
+                        : Text(
+                            Formatters.formatChatTimestamp(chat.lastMessageAt!),
+                            style: AppTypography.captionSmall.copyWith(color: AppColors.textHint),
+                          ),
+                  ),
                 );
               },
             );

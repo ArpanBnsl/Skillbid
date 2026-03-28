@@ -6,9 +6,12 @@ import '../../providers/auth_provider.dart';
 import '../../providers/bid_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/user_provider.dart' as userp;
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/empty_state_widget.dart';
 import '../../widgets/common/loading_widget.dart';
+import 'client_job_detail_screen.dart';
 import 'create_job_screen.dart';
 
 class ClientRecentBidItem {
@@ -80,6 +83,8 @@ class ClientHomeScreen extends ConsumerStatefulWidget {
 }
 
 class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
+  final _bidsKey = GlobalKey();
+
   Future<void> _openCreateJob() async {
     try {
       final skills = await ref.read(skillsProvider.future);
@@ -105,6 +110,32 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
     }
   }
 
+  void _scrollToBids() {
+    final ctx = _bidsKey.currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx, duration: const Duration(milliseconds: 400));
+    }
+  }
+
+  void _navigateToTab(int index) {
+    // Find the ClientShell ancestor and switch tab
+    final shellState = context.findAncestorStateOfType<State>();
+    // Use a simpler approach: we set the bottom nav index via callback
+    // The shell exposes _currentIndex via setState, so we navigate by
+    // rebuilding with the correct index
+    if (shellState != null && shellState.mounted) {
+      // Walk up to find the scaffold with bottom nav
+      final scaffoldState = context.findAncestorStateOfType<ScaffoldState>();
+      if (scaffoldState != null) {
+        // Navigate by tapping the bottom nav programmatically
+        final bottomNav = scaffoldState.widget.bottomNavigationBar;
+        if (bottomNav is BottomNavigationBar) {
+          bottomNav.onTap?.call(index);
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final profileAsync = ref.watch(userp.currentUserProvider);
@@ -112,17 +143,21 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
     final recentBidsAsync = ref.watch(clientRecentBidsProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Client Home'),
+        backgroundColor: AppColors.surface,
+        title: Text('Client Home', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
         actions: [
           IconButton(
             tooltip: 'Post New Job',
-            icon: const Icon(Icons.add_circle_outline),
+            icon: const Icon(Icons.add_circle_outline, color: AppColors.primaryColor),
             onPressed: _openCreateJob,
           ),
         ],
       ),
       body: RefreshIndicator(
+        color: AppColors.primaryColor,
+        backgroundColor: AppColors.surfaceLight,
         onRefresh: () async {
           ref.invalidate(clientJobsProvider);
           ref.invalidate(clientPostedJobsProvider);
@@ -144,13 +179,43 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                 onPostJob: _openCreateJob,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 14),
+            // Quick action row
+            Row(
+              children: [
+                _QuickAction(
+                  icon: Icons.add_task_outlined,
+                  label: 'Post Job',
+                  onTap: _openCreateJob,
+                ),
+                const SizedBox(width: 8),
+                _QuickAction(
+                  icon: Icons.gavel_outlined,
+                  label: 'View Bids',
+                  onTap: _scrollToBids,
+                ),
+                const SizedBox(width: 8),
+                _QuickAction(
+                  icon: Icons.work_outline,
+                  label: 'Projects',
+                  onTap: () => _navigateToTab(2),
+                ),
+                const SizedBox(width: 8),
+                _QuickAction(
+                  icon: Icons.chat_outlined,
+                  label: 'Messages',
+                  onTap: () => _navigateToTab(1),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
             _ActivityStats(
               jobsAsync: myJobsAsync,
               recentBidsAsync: recentBidsAsync,
             ),
-            const SizedBox(height: 18),
+            const SizedBox(height: 22),
             Row(
+              key: _bidsKey,
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
@@ -158,7 +223,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
                     'Recent Bids On Your Projects',
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: Theme.of(context).textTheme.titleMedium,
+                    style: AppTypography.heading4.copyWith(color: AppColors.textPrimary),
                   ),
                 ),
               ],
@@ -166,7 +231,7 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
             const SizedBox(height: 10),
             recentBidsAsync.when(
               loading: () => const SizedBox(height: 220, child: LoadingWidget(message: 'Loading recent bids...')),
-              error: (e, _) => Text('Failed to load bids: $e'),
+              error: (e, _) => Text('Failed to load bids: $e', style: const TextStyle(color: AppColors.error)),
               data: (items) {
                 if (items.isEmpty) {
                   return const SizedBox(
@@ -195,6 +260,48 @@ class _ClientHomeScreenState extends ConsumerState<ClientHomeScreen> {
   }
 }
 
+class _QuickAction extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  const _QuickAction({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color: AppColors.surfaceLight,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: AppColors.border),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(icon, size: 20, color: AppColors.primaryColor),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.captionSmall.copyWith(color: AppColors.textSecondary),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _HeroPostCard extends StatelessWidget {
   final String userFirstName;
   final VoidCallback onPostJob;
@@ -207,14 +314,10 @@ class _HeroPostCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0B6E6E), Color(0xFF1F9E9A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppColors.primaryGradient,
       ),
       child: Stack(
         children: [
@@ -224,9 +327,9 @@ class _HeroPostCard extends StatelessWidget {
             child: Container(
               width: 90,
               height: 90,
-              decoration: BoxDecoration(
+              decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.12),
+                color: AppColors.whiteOverlay,
               ),
             ),
           ),
@@ -238,7 +341,7 @@ class _HeroPostCard extends StatelessWidget {
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: AppColors.whiteOverlay.withValues(alpha: 0.08),
               ),
             ),
           ),
@@ -247,29 +350,22 @@ class _HeroPostCard extends StatelessWidget {
             children: [
               Text(
                 'Welcome, $userFirstName',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppTypography.heading3.copyWith(color: AppColors.textDark),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Need a task done? Post your project in minutes and get quality bids from service providers.',
-                style: TextStyle(
-                  color: Colors.white,
-                  height: 1.35,
-                ),
+                style: AppTypography.bodySmall.copyWith(color: AppColors.textDark.withValues(alpha: 0.8)),
               ),
               const SizedBox(height: 16),
               FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF0B6E6E),
+                  backgroundColor: AppColors.surface,
+                  foregroundColor: AppColors.primaryColor,
                 ),
                 onPressed: onPostJob,
                 icon: const Icon(Icons.add_task_outlined),
-                label: const Text('Post A New Job'),
+                label: Text('Post A New Job', style: AppTypography.buttonText.copyWith(color: AppColors.primaryColor)),
               ),
             ],
           ),
@@ -343,30 +439,33 @@ class _StatTile extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      height: 98,
+      height: 100,
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
+        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE6EFEF)),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 17, color: const Color(0xFF0B6E6E)),
+            Icon(icon, size: 18, color: AppColors.primaryColor),
             const SizedBox(height: 6),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              child: Text(
+                value,
+                style: AppTypography.statValue.copyWith(color: AppColors.textPrimary),
+              ),
             ),
             const Spacer(),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: Colors.black54),
+              style: AppTypography.captionSmall.copyWith(color: AppColors.textSecondary),
             ),
           ],
         ),
@@ -386,29 +485,106 @@ class _RecentBidCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
+    final statusColor = switch (item.bid.status) {
+      'pending' => AppColors.warning,
+      'accepted' => AppColors.success,
+      'rejected' => AppColors.error,
+      _ => AppColors.info,
+    };
+    final statusBg = switch (item.bid.status) {
+      'pending' => AppColors.warningLight,
+      'accepted' => AppColors.successLight,
+      'rejected' => AppColors.errorLight,
+      _ => AppColors.infoLight,
+    };
+
+    return Container(
       margin: margin,
-      child: ListTile(
-        leading: CircleAvatar(
-          backgroundColor: const Color(0xFFE6F4F3),
-          foregroundColor: const Color(0xFF0B6E6E),
-          child: Text(_initials(item.providerName)),
-        ),
-        title: Text(item.job.title, maxLines: 1, overflow: TextOverflow.ellipsis),
-        subtitle: Text(
-          '${item.providerName} • ${Formatters.formatTimeAgo(item.bid.createdAt)}',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        trailing: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          crossAxisAlignment: CrossAxisAlignment.end,
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              Formatters.formatCurrencyShort(item.bid.amount),
-              style: const TextStyle(fontWeight: FontWeight.w700),
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 18,
+                  backgroundColor: AppColors.surfaceVariant,
+                  child: Text(
+                    _initials(item.providerName),
+                    style: AppTypography.labelMedium.copyWith(color: AppColors.primaryColor),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        item.job.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        '${item.providerName} • ${Formatters.formatTimeAgo(item.bid.createdAt)}',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    Text(
+                      Formatters.formatCurrencyShort(item.bid.amount),
+                      style: AppTypography.bidAmount.copyWith(color: AppColors.primaryColor, fontSize: 18),
+                    ),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        item.bid.status,
+                        style: AppTypography.captionSmall.copyWith(color: statusColor),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
             ),
-            Text(item.bid.status, style: const TextStyle(fontSize: 11, color: Colors.black54)),
+            const SizedBox(height: 10),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryColor,
+                  side: const BorderSide(color: AppColors.border),
+                  padding: const EdgeInsets.symmetric(vertical: 8),
+                ),
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => ClientJobDetailScreen(job: item.job),
+                    ),
+                  );
+                },
+                child: Text('View Job', style: AppTypography.labelMedium.copyWith(color: AppColors.primaryColor)),
+              ),
+            ),
           ],
         ),
       ),

@@ -8,6 +8,8 @@ import '../../repositories/job_repository.dart';
 import '../../services/location_service.dart';
 import '../../services/route_service.dart';
 import '../../services/tracking_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 
 class ProviderTrackingScreen extends StatefulWidget {
   final ContractModel contract;
@@ -96,7 +98,13 @@ class _ProviderTrackingScreenState extends State<ProviderTrackingScreen> {
     final center = _providerLatLng ?? _jobLatLng ?? const LatLng(20.5937, 78.9629);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Navigate To Contract Location')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: Text('Navigate To Contract Location', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: Stack(
         children: [
           FlutterMap(
@@ -107,7 +115,7 @@ class _ProviderTrackingScreenState extends State<ProviderTrackingScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.skillbid.app',
               ),
@@ -117,7 +125,7 @@ class _ProviderTrackingScreenState extends State<ProviderTrackingScreen> {
                     Polyline(
                       points: _routeData!.polylinePoints,
                       strokeWidth: 4,
-                      color: Colors.blue,
+                      color: AppColors.primaryColor,
                     ),
                   ],
                 ),
@@ -128,14 +136,14 @@ class _ProviderTrackingScreenState extends State<ProviderTrackingScreen> {
                       point: _jobLatLng!,
                       width: 42,
                       height: 42,
-                      child: const Icon(Icons.location_on, color: Colors.red, size: 36),
+                      child: Icon(Icons.location_on, color: AppColors.error, size: 36),
                     ),
                   if (_providerLatLng != null)
                     Marker(
                       point: _providerLatLng!,
                       width: 42,
                       height: 42,
-                      child: const Icon(Icons.navigation, color: Colors.blue, size: 34),
+                      child: Icon(Icons.navigation, color: AppColors.primaryColor, size: 34),
                     ),
                 ],
               ),
@@ -145,19 +153,33 @@ class _ProviderTrackingScreenState extends State<ProviderTrackingScreen> {
             left: 16,
             right: 16,
             bottom: 24,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: _routeData == null
-                    ? const Text('Calculating ETA and distance...', textAlign: TextAlign.center)
-                    : Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _metric(Icons.route, _routeData!.distanceText),
-                          _metric(Icons.access_time, _routeData!.durationText),
-                        ],
-                      ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.glowTeal,
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
+              child: _routeData == null
+                  ? Text(
+                      'Calculating ETA and distance...',
+                      textAlign: TextAlign.center,
+                      style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                    )
+                  : Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _metric(Icons.route, _routeData!.distanceText),
+                        _metric(Icons.access_time, _routeData!.durationText),
+                      ],
+                    ),
             ),
           ),
         ],
@@ -168,9 +190,9 @@ class _ProviderTrackingScreenState extends State<ProviderTrackingScreen> {
   Widget _metric(IconData icon, String text) {
     return Row(
       children: [
-        Icon(icon, size: 20, color: Colors.teal),
+        Icon(icon, size: 20, color: AppColors.primaryColor),
         const SizedBox(width: 6),
-        Text(text, style: const TextStyle(fontWeight: FontWeight.w700)),
+        Text(text, style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
       ],
     );
   }

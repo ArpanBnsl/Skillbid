@@ -10,6 +10,8 @@ import '../../providers/contract_provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../providers/user_provider.dart' as userp;
 import '../../services/realtime_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/empty_state_widget.dart';
 import '../../widgets/common/image_viewer.dart';
@@ -74,19 +76,29 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
     final imagesAsync = ref.watch(jobImagesProvider(job.id));
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Job Details'),
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
+        title: Text('Job Details', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
         actions: [
           IconButton(
             tooltip: 'Delete job',
             onPressed: (job.status == 'open' && contractAsync.valueOrNull == null)
                 ? () => _deleteJob(context, ref)
                 : null,
-            icon: const Icon(Icons.delete_outline),
+            icon: Icon(
+              Icons.delete_outline,
+              color: (job.status == 'open' && contractAsync.valueOrNull == null)
+                  ? AppColors.error
+                  : AppColors.textHint,
+            ),
           ),
         ],
       ),
       body: RefreshIndicator(
+        color: AppColors.primaryColor,
+        backgroundColor: AppColors.surfaceLight,
         onRefresh: () async {
           ref.invalidate(jobBidsProvider(job.id));
           ref.invalidate(contractByJobProvider(job.id));
@@ -112,12 +124,23 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
                 if (contract == null) {
                   return const SizedBox.shrink();
                 }
-                return Card(
+                return Container(
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                  ),
                   child: ListTile(
-                    leading: const Icon(Icons.handshake_outlined),
-                    title: Text('Contract is ${contract.status}'),
-                    subtitle: Text('Created on ${Formatters.formatDate(contract.createdAt)}'),
-                    trailing: const Icon(Icons.chevron_right),
+                    leading: const Icon(Icons.handshake_outlined, color: AppColors.primaryColor),
+                    title: Text(
+                      'Contract is ${contract.status}',
+                      style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary),
+                    ),
+                    subtitle: Text(
+                      'Created on ${Formatters.formatDate(contract.createdAt)}',
+                      style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                    ),
+                    trailing: const Icon(Icons.chevron_right, color: AppColors.textHint),
                     onTap: () {
                       Navigator.push(
                         context,
@@ -130,14 +153,14 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
                 );
               },
             ),
-            const SizedBox(height: 8),
-            Text('Bids', style: Theme.of(context).textTheme.titleMedium),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
+            Text('Bids', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+            const SizedBox(height: 10),
             bidsAsync.when(
               loading: () => const SizedBox(height: 180, child: LoadingWidget(message: 'Loading bids...')),
               error: (e, _) => Padding(
                 padding: const EdgeInsets.all(12),
-                child: Text('Failed to load bids: $e'),
+                child: Text('Failed to load bids: $e', style: const TextStyle(color: AppColors.error)),
               ),
               data: (bids) {
                 if (bids.isEmpty) {
@@ -157,63 +180,118 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
                     final contract = contractAsync.valueOrNull;
                     final isAcceptedContract = contract != null && contract.providerId == bid.providerId;
 
-                    return Card(
-                      margin: const EdgeInsets.only(bottom: 10),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(
-                                    providerName,
-                                    style: const TextStyle(fontWeight: FontWeight.w700),
-                                  ),
+                    final statusColor = switch (bid.status) {
+                      'pending' => AppColors.warning,
+                      'accepted' => AppColors.success,
+                      'rejected' => AppColors.error,
+                      _ => AppColors.info,
+                    };
+                    final statusBg = switch (bid.status) {
+                      'pending' => AppColors.warningLight,
+                      'accepted' => AppColors.successLight,
+                      'rejected' => AppColors.errorLight,
+                      _ => AppColors.infoLight,
+                    };
+
+                    return Container(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              CircleAvatar(
+                                radius: 18,
+                                backgroundColor: AppColors.surfaceVariant,
+                                child: Text(
+                                  _bidInitials(providerName),
+                                  style: AppTypography.labelMedium.copyWith(color: AppColors.primaryColor),
                                 ),
-                                Text(
-                                  Formatters.formatCurrencyShort(bid.amount),
-                                  style: const TextStyle(fontWeight: FontWeight.w700),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  providerName,
+                                  style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary),
                                 ),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text('Status: ${bid.status}'),
-                            if (bid.estimatedDays != null) ...[
-                              const SizedBox(height: 2),
-                              Text('Estimated days: ${bid.estimatedDays}'),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                                decoration: BoxDecoration(
+                                  color: statusBg,
+                                  borderRadius: BorderRadius.circular(999),
+                                ),
+                                child: Text(
+                                  bid.status,
+                                  style: AppTypography.labelSmall.copyWith(color: statusColor),
+                                ),
+                              ),
                             ],
-                            if (bid.message != null && bid.message!.trim().isNotEmpty) ...[
-                              const SizedBox(height: 6),
-                              Text(bid.message!),
-                            ],
-                            const SizedBox(height: 10),
-                            Column(
-                              crossAxisAlignment: CrossAxisAlignment.stretch,
-                              children: [
-                                OutlinedButton.icon(
-                                  onPressed: () => _showBidderProfile(context, bid.providerId),
-                                  icon: const Icon(Icons.person_outline),
-                                  label: const Text('View Profile'),
-                                ),
-                                const SizedBox(height: 8),
-                                Wrap(
-                                  spacing: 10,
-                                  runSpacing: 8,
-                                  children: [
-                                    FilledButton(
-                                      onPressed: (bid.status != 'pending' || isAcceptedContract)
-                                          ? null
-                                          : () => _acceptBid(context, ref, bid.id, bid.providerId),
-                                      child: Text(isAcceptedContract ? 'Accepted' : 'Accept'),
-                                    ),
-                                  ],
-                                ),
-                              ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            Formatters.formatCurrencyShort(bid.amount),
+                            style: AppTypography.bidAmount.copyWith(color: AppColors.primaryColor),
+                          ),
+                          if (bid.estimatedDays != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Estimated: ${bid.estimatedDays} days',
+                              style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
                             ),
                           ],
-                        ),
+                          if (bid.message != null && bid.message!.trim().isNotEmpty) ...[
+                            const SizedBox(height: 8),
+                            Text(
+                              bid.message!,
+                              style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
+                          const SizedBox(height: 14),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: OutlinedButton.icon(
+                                  style: OutlinedButton.styleFrom(
+                                    foregroundColor: AppColors.primaryColor,
+                                    side: const BorderSide(color: AppColors.border),
+                                  ),
+                                  onPressed: () => _showBidderProfile(context, bid.providerId),
+                                  icon: const Icon(Icons.person_outline, size: 18),
+                                  label: Text('View Profile', style: AppTypography.labelMedium.copyWith(color: AppColors.primaryColor)),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: FilledButton(
+                                  style: FilledButton.styleFrom(
+                                    backgroundColor: isAcceptedContract
+                                        ? AppColors.successLight
+                                        : AppColors.primaryColor,
+                                    foregroundColor: isAcceptedContract
+                                        ? AppColors.success
+                                        : AppColors.textDark,
+                                    disabledBackgroundColor: AppColors.surfaceVariant,
+                                    disabledForegroundColor: AppColors.textHint,
+                                  ),
+                                  onPressed: (bid.status != 'pending' || isAcceptedContract)
+                                      ? null
+                                      : () => _acceptBid(context, ref, bid.id, bid.providerId),
+                                  child: Text(
+                                    isAcceptedContract ? 'Accepted' : 'Accept',
+                                    style: AppTypography.labelMedium,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
                     );
                   }).toList(),
@@ -226,6 +304,13 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
     );
   }
 
+  String _bidInitials(String name) {
+    final parts = name.trim().split(RegExp(r'\s+')).where((p) => p.isNotEmpty).toList();
+    if (parts.isEmpty) return 'SP';
+    if (parts.length == 1) return parts.first[0].toUpperCase();
+    return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+  }
+
   Widget _jobCard(JobModel job, AsyncValue imagesAsync) {
     final uiStatus = switch (job.status) {
       'open' => 'Out for Bid',
@@ -236,14 +321,26 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
       _ => job.status,
     };
 
+    final statusColor = switch (job.status) {
+      'open' => AppColors.warning,
+      'in_progress' => AppColors.info,
+      'completed' => AppColors.success,
+      'cancelled' || 'deleted' => AppColors.error,
+      _ => AppColors.textSecondary,
+    };
+    final statusBg = switch (job.status) {
+      'open' => AppColors.warningLight,
+      'in_progress' => AppColors.infoLight,
+      'completed' => AppColors.successLight,
+      'cancelled' || 'deleted' => AppColors.errorLight,
+      _ => AppColors.surfaceVariant,
+    };
+
     return Container(
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(24),
-        gradient: const LinearGradient(
-          colors: [Color(0xFFF7FBFB), Color(0xFFE7F6F5)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        borderRadius: BorderRadius.circular(20),
+        gradient: AppColors.cardGradient,
+        border: Border.all(color: AppColors.border),
       ),
       child: Padding(
         padding: const EdgeInsets.all(20),
@@ -256,33 +353,39 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
                 Expanded(
                   child: Text(
                     job.title,
-                    style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 24),
+                    style: AppTypography.heading3.copyWith(color: AppColors.textPrimary),
                   ),
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    _JobStatusPill(label: uiStatus),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: statusBg,
+                        borderRadius: BorderRadius.circular(999),
+                      ),
+                      child: Text(
+                        uiStatus,
+                        style: AppTypography.labelSmall.copyWith(color: statusColor),
+                      ),
+                    ),
                     if (job.isImmediate) ...[
                       const SizedBox(height: 6),
                       Container(
                         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
                         decoration: BoxDecoration(
-                          color: Colors.orange.shade100,
+                          color: AppColors.glowOrange,
                           borderRadius: BorderRadius.circular(999),
                         ),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.bolt, size: 14, color: Colors.orange.shade800),
+                            const Icon(Icons.bolt, size: 14, color: AppColors.accent),
                             const SizedBox(width: 4),
                             Text(
                               'Immediate',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.orange.shade800,
-                              ),
+                              style: AppTypography.labelSmall.copyWith(color: AppColors.accent),
                             ),
                           ],
                         ),
@@ -292,7 +395,7 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
                 ),
               ],
             ),
-            const SizedBox(height: 12),
+            const SizedBox(height: 14),
             Wrap(
               spacing: 10,
               runSpacing: 10,
@@ -304,7 +407,10 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
               ],
             ),
             const SizedBox(height: 16),
-            Text(job.description, style: TextStyle(color: Colors.grey.shade800, height: 1.45)),
+            Text(
+              job.description,
+              style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+            ),
             const SizedBox(height: 16),
             imagesAsync.when(
               loading: () => const SizedBox.shrink(),
@@ -314,7 +420,10 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Reference Images', style: TextStyle(fontWeight: FontWeight.w700)),
+                    Text(
+                      'Reference Images',
+                      style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary),
+                    ),
                     const SizedBox(height: 10),
                     SizedBox(
                       height: 88,
@@ -358,38 +467,39 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
         ? 'Expired'
         : '${hours}h ${minutes}m ${seconds}s remaining';
 
-    return Card(
-      color: expired ? Colors.red.shade50 : Colors.orange.shade50,
-      child: Padding(
-        padding: const EdgeInsets.all(14),
-        child: Row(
-          children: [
-            Icon(
-              expired ? Icons.timer_off_outlined : Icons.bolt,
-              color: expired ? Colors.red : Colors.orange.shade800,
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Immediate Service',
-                    style: TextStyle(fontWeight: FontWeight.w700),
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: expired ? AppColors.errorLight : AppColors.glowOrange,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: expired ? AppColors.error.withValues(alpha: 0.3) : AppColors.accent.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            expired ? Icons.timer_off_outlined : Icons.bolt,
+            color: expired ? AppColors.error : AppColors.accent,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Immediate Service',
+                  style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  timeText,
+                  style: AppTypography.labelMedium.copyWith(
+                    color: expired ? AppColors.error : AppColors.accent,
                   ),
-                  const SizedBox(height: 2),
-                  Text(
-                    timeText,
-                    style: TextStyle(
-                      color: expired ? Colors.red : Colors.orange.shade900,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -424,11 +534,22 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
     final confirmed = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Delete Job'),
-            content: const Text('Are you sure you want to delete this job?'),
+            backgroundColor: AppColors.surfaceLight,
+            title: Text('Delete Job', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+            content: Text(
+              'Are you sure you want to delete this job?',
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+            ),
             actions: [
-              TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-              FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Delete')),
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
+              ),
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text('Delete'),
+              ),
             ],
           ),
         ) ??
@@ -453,6 +574,7 @@ class _ClientJobDetailScreenState extends ConsumerState<ClientJobDetailScreen> {
       context: context,
       isScrollControlled: true,
       showDragHandle: true,
+      backgroundColor: AppColors.surface,
       builder: (_) => FractionallySizedBox(
         heightFactor: 0.9,
         child: _BidderProfileSheet(providerId: providerId),
@@ -476,14 +598,18 @@ class _BidderProfileSheet extends ConsumerWidget {
     final contractsAsync = ref.watch(providerContractsByUserProvider(providerId));
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF7FAFA),
-      appBar: AppBar(title: const Text('Bidder Profile')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
+        title: Text('Bidder Profile', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+      ),
       body: profileAsync.when(
-        loading: () => const Center(child: CircularProgressIndicator()),
-        error: (e, _) => Center(child: Text('Failed to load profile: $e')),
+        loading: () => const Center(child: CircularProgressIndicator(color: AppColors.primaryColor)),
+        error: (e, _) => Center(child: Text('Failed to load profile: $e', style: const TextStyle(color: AppColors.error))),
         data: (profile) {
           if (profile == null) {
-            return const Center(child: Text('Profile not found'));
+            return Center(child: Text('Profile not found', style: TextStyle(color: AppColors.textSecondary)));
           }
 
           final providerProfile = providerProfileAsync.valueOrNull;
@@ -497,53 +623,71 @@ class _BidderProfileSheet extends ConsumerWidget {
             padding: const EdgeInsets.all(16),
             children: [
               Container(
-                padding: const EdgeInsets.all(16),
+                padding: const EdgeInsets.all(20),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: AppColors.surfaceLight,
                   borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border),
                 ),
                 child: Column(
                   children: [
-                    CircleAvatar(radius: 32, child: Text(_initials(profile.fullName))),
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppColors.primaryGradient,
+                      ),
+                      child: CircleAvatar(
+                        radius: 32,
+                        backgroundColor: AppColors.surfaceLight,
+                        child: Text(
+                          _initials(profile.fullName),
+                          style: AppTypography.heading4.copyWith(color: AppColors.primaryColor),
+                        ),
+                      ),
+                    ),
                     const SizedBox(height: 12),
                     Text(
                       profile.fullName,
                       textAlign: TextAlign.center,
-                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18),
+                      style: AppTypography.heading4.copyWith(color: AppColors.textPrimary),
                     ),
                     const SizedBox(height: 4),
                     Text(
                       'Member since ${Formatters.formatDate(profile.createdAt)}',
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 12),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Provider Details', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                      const Divider(),
-                      if (rating != null) ...[
-                        _row('Average Rating', '${rating.toStringAsFixed(1)}/5'),
-                      ],
-                      _row('Reliability Score', '${(providerProfile?.relScore ?? 5.0).toStringAsFixed(1)}/10'),
-                      _row('Experience', '${providerProfile?.experienceYears ?? 0} years'),
-                      _row('Hourly Rate', Formatters.formatCurrencyShort(providerProfile?.hourlyRate ?? 0)),
-                      _row('Completed Projects', '$completedCount'),
-                      _row('Verified', (providerProfile?.verified ?? false) ? 'Yes' : 'No'),
-                      if (providerProfile?.bio?.trim().isNotEmpty == true) ...[
-                        const SizedBox(height: 10),
-                        const Text('Bio', style: TextStyle(fontWeight: FontWeight.w700)),
-                        const SizedBox(height: 4),
-                        Text(providerProfile!.bio!),
-                      ],
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(16),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Provider Details', style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
+                    const Divider(color: AppColors.divider),
+                    if (rating != null) ...[
+                      _row('Average Rating', '${rating.toStringAsFixed(1)}/5'),
                     ],
-                  ),
+                    _row('Reliability Score', '${(providerProfile?.relScore ?? 5.0).toStringAsFixed(1)}/10'),
+                    _row('Experience', '${providerProfile?.experienceYears ?? 0} years'),
+                    _row('Hourly Rate', Formatters.formatCurrencyShort(providerProfile?.hourlyRate ?? 0)),
+                    _row('Completed Projects', '$completedCount'),
+                    _row('Verified', (providerProfile?.verified ?? false) ? 'Yes' : 'No'),
+                    if (providerProfile?.bio?.trim().isNotEmpty == true) ...[
+                      const SizedBox(height: 10),
+                      Text('Bio', style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
+                      const SizedBox(height: 4),
+                      Text(providerProfile!.bio!, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                    ],
+                  ],
                 ),
               ),
               const SizedBox(height: 12),
@@ -553,148 +697,177 @@ class _BidderProfileSheet extends ConsumerWidget {
                 error: (_, __) => const SizedBox.shrink(),
                 data: (skillIds) {
                   if (skillIds.isEmpty) return const SizedBox.shrink();
-                  return Card(
-                    child: Padding(
-                      padding: const EdgeInsets.all(14),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Skills', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                          const Divider(),
-                          Wrap(
-                            spacing: 8,
-                            runSpacing: 6,
-                            children: skillIds.map((id) {
-                              final skillAsync = ref.watch(skillProvider(id));
-                              return Chip(
-                                label: Text(skillAsync.valueOrNull?.name ?? 'Skill $id'),
-                                visualDensity: VisualDensity.compact,
-                              );
-                            }).toList(),
-                          ),
-                        ],
-                      ),
+                  return Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Skills', style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
+                        const Divider(color: AppColors.divider),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 6,
+                          children: skillIds.map((id) {
+                            final skillAsync = ref.watch(skillProvider(id));
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: AppColors.surfaceVariant,
+                                borderRadius: BorderRadius.circular(999),
+                                border: Border.all(color: AppColors.border),
+                              ),
+                              child: Text(
+                                skillAsync.valueOrNull?.name ?? 'Skill $id',
+                                style: AppTypography.labelSmall.copyWith(color: AppColors.primaryColor),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                      ],
                     ),
                   );
                 },
               ),
-              const SizedBox(height: 12),
-              Text('Completed Contracts', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 16),
+              Text('Completed Contracts', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
               const SizedBox(height: 8),
               if (completedContracts.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(14),
-                    child: Text('No completed contracts yet.'),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
                   ),
+                  child: Text('No completed contracts yet.', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
                 )
               else
                 Column(
                   children: completedContracts.map((contract) {
                     final jobAsync = ref.watch(jobProvider(contract.jobId));
                     final title = jobAsync.valueOrNull?.title ?? 'Project ${contract.jobId.substring(0, 8)}';
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 10),
-                      child: Padding(
-                        padding: const EdgeInsets.all(14),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(title, style: const TextStyle(fontWeight: FontWeight.w700)),
-                            if (contract.providerRating != null) ...[
-                              const SizedBox(height: 4),
-                              Text('Client Rating: ${contract.providerRating}/5'),
-                            ],
-                            if (contract.reviewText?.trim().isNotEmpty == true) ...[
-                              const SizedBox(height: 4),
-                              Text('Review: ${contract.reviewText}'),
-                            ],
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(title, style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
+                          if (contract.providerRating != null) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Client Rating: ${contract.providerRating}/5',
+                              style: AppTypography.caption.copyWith(color: AppColors.warning),
+                            ),
                           ],
-                        ),
+                          if (contract.reviewText?.trim().isNotEmpty == true) ...[
+                            const SizedBox(height: 4),
+                            Text(
+                              'Review: ${contract.reviewText}',
+                              style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ],
+                        ],
                       ),
                     );
                   }).toList(),
                 ),
-              const SizedBox(height: 12),
-              Text('Past Works', style: Theme.of(context).textTheme.titleMedium),
+              const SizedBox(height: 16),
+              Text('Past Works', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
               const SizedBox(height: 8),
               portfolioAsync.when(
                 loading: () => const Padding(
                   padding: EdgeInsets.symmetric(vertical: 20),
-                  child: Center(child: CircularProgressIndicator()),
+                  child: Center(child: CircularProgressIndicator(color: AppColors.primaryColor)),
                 ),
                 error: (e, _) => Padding(
                   padding: const EdgeInsets.symmetric(vertical: 12),
-                  child: Text('Failed to load past works: $e'),
+                  child: Text('Failed to load past works: $e', style: const TextStyle(color: AppColors.error)),
                 ),
                 data: (items) {
                   if (items.isEmpty) {
-                    return const Card(
-                      child: Padding(
-                        padding: EdgeInsets.all(14),
-                        child: Text('No past works shared yet.'),
+                    return Container(
+                      padding: const EdgeInsets.all(14),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
                       ),
+                      child: Text('No past works shared yet.', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
                     );
                   }
 
                   return Column(
                     children: items.map((portfolio) {
                       final imagesAsync = ref.watch(portfolioImagesProvider(portfolio.id));
-                      return Card(
+                      return Container(
                         margin: const EdgeInsets.only(bottom: 10),
-                        child: Padding(
-                          padding: const EdgeInsets.all(14),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: AppColors.surfaceLight,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.border),
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              portfolio.title,
+                              style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary),
+                            ),
+                            if (portfolio.description?.trim().isNotEmpty == true) ...[
+                              const SizedBox(height: 6),
+                              Text(portfolio.description!, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                            ],
+                            if (portfolio.cost != null) ...[
+                              const SizedBox(height: 6),
                               Text(
-                                portfolio.title,
-                                style: const TextStyle(fontWeight: FontWeight.w700),
-                              ),
-                              if (portfolio.description?.trim().isNotEmpty == true) ...[
-                                const SizedBox(height: 6),
-                                Text(portfolio.description!),
-                              ],
-                              if (portfolio.cost != null) ...[
-                                const SizedBox(height: 6),
-                                Text(
-                                  Formatters.formatCurrencyShort(portfolio.cost!),
-                                  style: const TextStyle(fontWeight: FontWeight.w600),
-                                ),
-                              ],
-                              const SizedBox(height: 8),
-                              imagesAsync.when(
-                                loading: () => const SizedBox.shrink(),
-                                error: (_, __) => const SizedBox.shrink(),
-                                data: (images) {
-                                  if (images.isEmpty) return const SizedBox.shrink();
-                                  return SizedBox(
-                                    height: 84,
-                                    child: ListView.separated(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: images.length,
-                                      separatorBuilder: (_, __) => const SizedBox(width: 8),
-                                      itemBuilder: (context, index) {
-                                        final image = images[index];
-                                        return GestureDetector(
-                                          onTap: () => ImageViewer.showNetwork(context, image.imageUrl),
-                                          child: ClipRRect(
-                                            borderRadius: BorderRadius.circular(12),
-                                            child: Image.network(
-                                              image.imageUrl,
-                                              width: 84,
-                                              height: 84,
-                                              fit: BoxFit.cover,
-                                            ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
+                                Formatters.formatCurrencyShort(portfolio.cost!),
+                                style: AppTypography.labelLarge.copyWith(color: AppColors.primaryColor),
                               ),
                             ],
-                          ),
+                            const SizedBox(height: 8),
+                            imagesAsync.when(
+                              loading: () => const SizedBox.shrink(),
+                              error: (_, __) => const SizedBox.shrink(),
+                              data: (images) {
+                                if (images.isEmpty) return const SizedBox.shrink();
+                                return SizedBox(
+                                  height: 84,
+                                  child: ListView.separated(
+                                    scrollDirection: Axis.horizontal,
+                                    itemCount: images.length,
+                                    separatorBuilder: (_, __) => const SizedBox(width: 8),
+                                    itemBuilder: (context, index) {
+                                      final image = images[index];
+                                      return GestureDetector(
+                                        onTap: () => ImageViewer.showNetwork(context, image.imageUrl),
+                                        child: ClipRRect(
+                                          borderRadius: BorderRadius.circular(12),
+                                          child: Image.network(
+                                            image.imageUrl,
+                                            width: 84,
+                                            height: 84,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                  ),
+                                );
+                              },
+                            ),
+                          ],
                         ),
                       );
                     }).toList(),
@@ -715,8 +888,8 @@ class _BidderProfileSheet extends ConsumerWidget {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
+          Text(label, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+          Text(value, style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
         ],
       ),
     );
@@ -741,40 +914,17 @@ class _DetailChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: AppColors.border),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.teal.shade700),
+          Icon(icon, size: 16, color: AppColors.primaryColor),
           const SizedBox(width: 6),
-          Text(label),
+          Text(label, style: AppTypography.labelSmall.copyWith(color: AppColors.textPrimary)),
         ],
-      ),
-    );
-  }
-}
-
-class _JobStatusPill extends StatelessWidget {
-  final String label;
-
-  const _JobStatusPill({required this.label});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: const Color(0xFFD7F3F1),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        label,
-        style: const TextStyle(
-          color: Color(0xFF0B6E6E),
-          fontWeight: FontWeight.w700,
-        ),
       ),
     );
   }

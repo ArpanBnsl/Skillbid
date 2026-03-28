@@ -42,11 +42,27 @@ class AppRouter {
       ),
       GoRoute(
         path: clientShellRoute,
-        builder: (context, state) => const ClientShell(),
+        builder: (context, state) {
+          final qp = state.uri.queryParameters;
+          return ClientShell(
+            initialIndex: int.tryParse(qp['tab'] ?? '') ?? 0,
+            initialChatId: qp['chatId'],
+            initialChatTitle: qp['chatTitle'],
+            initialJobId: qp['jobId'],
+          );
+        },
       ),
       GoRoute(
         path: providerShellRoute,
-        builder: (context, state) => const ProviderShell(),
+        builder: (context, state) {
+          final qp = state.uri.queryParameters;
+          return ProviderShell(
+            initialIndex: int.tryParse(qp['tab'] ?? '') ?? 0,
+            initialChatId: qp['chatId'],
+            initialChatTitle: qp['chatTitle'],
+            initialJobId: qp['jobId'],
+          );
+        },
       ),
     ],
     errorBuilder: (context, state) => Scaffold(

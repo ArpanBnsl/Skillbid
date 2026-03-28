@@ -5,6 +5,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/user_provider.dart' as userp;
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../utils/validators.dart';
 import '../../widgets/common/loading_widget.dart';
@@ -20,15 +22,17 @@ class ClientProfileScreen extends ConsumerWidget {
     final email = ref.watch(currentUserEmailProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Profile'),
+        backgroundColor: AppColors.surface,
+        title: Text('Profile', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
       ),
       body: profileAsync.when(
         loading: () => const LoadingWidget(message: 'Loading profile...'),
-        error: (e, _) => Center(child: Text('Failed to load profile: $e')),
+        error: (e, _) => Center(child: Text('Failed to load profile: $e', style: const TextStyle(color: AppColors.error))),
         data: (profile) {
           if (profile == null) {
-            return const Center(child: Text('Profile not found'));
+            return Center(child: Text('Profile not found', style: TextStyle(color: AppColors.textSecondary)));
           }
 
           final postedCount = jobsAsync.valueOrNull?.length ?? 0;
@@ -49,139 +53,225 @@ class ClientProfileScreen extends ConsumerWidget {
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
-              Center(
-                child: CircleAvatar(
-                  radius: 34,
-                  child: Text(_initials(profile.fullName)),
+              // Profile header card
+              Container(
+                padding: const EdgeInsets.all(24),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: AppColors.border),
                 ),
-              ),
-              const SizedBox(height: 12),
-              Center(
-                child: Text(
-                  profile.fullName,
-                  style: Theme.of(context).textTheme.titleLarge,
-                ),
-              ),
-              const SizedBox(height: 4),
-              Center(
-                child: Text(profile.phone ?? 'No phone added'),
-              ),
-              if (email != null) ...[
-                const SizedBox(height: 4),
-                Center(
-                  child: Text(email, style: TextStyle(color: Colors.grey.shade600)),
-                ),
-              ],
-              const SizedBox(height: 12),
-              Center(
-                child: FilledButton.icon(
-                  onPressed: () => _showEditProfileDialog(context, ref, profile.fullName, profile.phone),
-                  icon: const Icon(Icons.edit_outlined),
-                  label: const Text('Edit Profile'),
-                ),
-              ),
-              const SizedBox(height: 20),
-              Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    children: [
-                      _statRow('Posted Projects', '$postedCount'),
-                      _statRow('Contracts', '$contractCount'),
-                      _statRow('Completed', '$completedCount'),
-                      if (profile.averageRating != null)
-                        _statRow('Your Rating', '${profile.averageRating!.toStringAsFixed(1)}/5'),
-                      _statRow('Immediate Requests Left', '${profile.immReqCnt}'),
-                      _statRow('Member Since', Formatters.formatDate(profile.createdAt)),
-                      const SizedBox(height: 4),
-                      const Align(
-                        alignment: Alignment.centerLeft,
+                child: Column(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(3),
+                      decoration: const BoxDecoration(
+                        shape: BoxShape.circle,
+                        gradient: AppColors.primaryGradient,
+                      ),
+                      child: CircleAvatar(
+                        radius: 36,
+                        backgroundColor: AppColors.surfaceLight,
                         child: Text(
-                          'Immediate requests are urgent jobs broadcast quickly to nearby providers.',
-                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                          _initials(profile.fullName),
+                          style: AppTypography.heading3.copyWith(color: AppColors.primaryColor),
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 14),
+                    Text(
+                      profile.fullName,
+                      style: AppTypography.heading3.copyWith(color: AppColors.textPrimary),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      profile.phone ?? 'No phone added',
+                      style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                    ),
+                    if (email != null) ...[
+                      const SizedBox(height: 4),
+                      Text(email, style: AppTypography.caption.copyWith(color: AppColors.textHint)),
                     ],
-                  ),
+                    const SizedBox(height: 16),
+                    FilledButton.icon(
+                      style: FilledButton.styleFrom(
+                        backgroundColor: AppColors.primaryColor,
+                        foregroundColor: AppColors.textDark,
+                      ),
+                      onPressed: () => _showEditProfileDialog(context, ref, profile.fullName, profile.phone),
+                      icon: const Icon(Icons.edit_outlined, size: 18),
+                      label: Text('Edit Profile', style: AppTypography.buttonText.copyWith(color: AppColors.textDark)),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(height: 16),
-              Text('Past Projects', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
+              // Stats grid
+              GridView.count(
+                crossAxisCount: 2,
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                crossAxisSpacing: 10,
+                mainAxisSpacing: 10,
+                childAspectRatio: 1.6,
+                children: [
+                  _StatCard(label: 'Posted Projects', value: '$postedCount', icon: Icons.work_outline),
+                  _StatCard(label: 'Contracts', value: '$contractCount', icon: Icons.handshake_outlined),
+                  _StatCard(label: 'Completed', value: '$completedCount', icon: Icons.check_circle_outline),
+                  _StatCard(
+                    label: 'Your Rating',
+                    value: profile.averageRating != null
+                        ? '${profile.averageRating!.toStringAsFixed(1)}/5'
+                        : 'N/A',
+                    icon: Icons.star_outline,
+                  ),
+                  _StatCard(label: 'Imm. Requests', value: '${profile.immReqCnt}', icon: Icons.bolt_outlined),
+                  _StatCard(
+                    label: 'Member Since',
+                    value: Formatters.formatDate(profile.createdAt),
+                    icon: Icons.calendar_today_outlined,
+                    smallValue: true,
+                  ),
+                ],
+              ),
+              const SizedBox(height: 6),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4),
+                child: Text(
+                  'Immediate requests are urgent jobs broadcast quickly to nearby providers.',
+                  style: AppTypography.captionSmall.copyWith(color: AppColors.textHint),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text('Past Projects', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+              const SizedBox(height: 10),
               if (pastContracts.isEmpty && pastJobs.isEmpty)
-                const Card(
-                  child: Padding(
-                    padding: EdgeInsets.all(14),
-                    child: Text('No past projects yet.'),
+                Container(
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: AppColors.surfaceLight,
+                    borderRadius: BorderRadius.circular(14),
+                    border: Border.all(color: AppColors.border),
+                  ),
+                  child: Text(
+                    'No past projects yet.',
+                    style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
                   ),
                 )
               else ...[
                 ...pastContracts.map((contract) {
                   final relatedJob = jobsById[contract.jobId];
                   final title = relatedJob?.title ?? 'Project ${contract.jobId.substring(0, 8)}';
-                  return Card(
+                  return Container(
                     margin: const EdgeInsets.only(bottom: 10),
-                    child: ExpansionTile(
-                      leading: const Icon(Icons.handshake_outlined),
-                      title: Text(title),
-                      subtitle: Text('Contract • ${_statusLabel(contract.status)}'),
-                      childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
-                      children: [
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text('Started: ${Formatters.formatDate(contract.startDate ?? contract.createdAt)}'),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Theme(
+                      data: Theme.of(context).copyWith(dividerColor: AppColors.transparent),
+                      child: ExpansionTile(
+                        leading: const Icon(Icons.handshake_outlined, color: AppColors.primaryColor),
+                        title: Text(title, style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
+                        subtitle: Text(
+                          'Contract • ${_statusLabel(contract.status)}',
+                          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
                         ),
-                        const SizedBox(height: 4),
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text('Ended: ${Formatters.formatDate(contract.endDate ?? contract.updatedAt)}'),
-                        ),
-                        if (contract.terminatedBy != null) ...[
+                        iconColor: AppColors.textHint,
+                        collapsedIconColor: AppColors.textHint,
+                        childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                        children: [
+                          Align(
+                            alignment: Alignment.centerLeft,
+                            child: Text(
+                              'Started: ${Formatters.formatDate(contract.startDate ?? contract.createdAt)}',
+                              style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                            ),
+                          ),
                           const SizedBox(height: 4),
                           Align(
                             alignment: Alignment.centerLeft,
-                            child: Text('Terminated by: ${contract.terminatedBy}'),
+                            child: Text(
+                              'Ended: ${Formatters.formatDate(contract.endDate ?? contract.updatedAt)}',
+                              style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                            ),
                           ),
+                          if (contract.terminatedBy != null) ...[
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Terminated by: ${contract.terminatedBy}',
+                                style: AppTypography.bodySmall.copyWith(color: AppColors.error),
+                              ),
+                            ),
+                          ],
+                          if (contract.providerRating != null) ...[
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Provider rating: ${contract.providerRating}/5',
+                                style: AppTypography.bodySmall.copyWith(color: AppColors.warning),
+                              ),
+                            ),
+                          ],
+                          if (contract.clientRating != null) ...[
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Your rating from provider: ${contract.clientRating}/5',
+                                style: AppTypography.bodySmall.copyWith(color: AppColors.warning),
+                              ),
+                            ),
+                          ],
+                          if (contract.reviewText?.trim().isNotEmpty == true) ...[
+                            const SizedBox(height: 4),
+                            Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Review: ${contract.reviewText}',
+                                style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                              ),
+                            ),
+                          ],
                         ],
-                        if (contract.providerRating != null) ...[
-                          const SizedBox(height: 4),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text('Provider rating: ${contract.providerRating}/5'),
-                          ),
-                        ],
-                        if (contract.clientRating != null) ...[
-                          const SizedBox(height: 4),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text('Your rating from provider: ${contract.clientRating}/5'),
-                          ),
-                        ],
-                        if (contract.reviewText?.trim().isNotEmpty == true) ...[
-                          const SizedBox(height: 4),
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: Text('Review: ${contract.reviewText}'),
-                          ),
-                        ],
-                      ],
+                      ),
                     ),
                   );
                 }),
                 ...dedupPastJobs.map((job) {
-                  return Card(
+                  return Container(
                     margin: const EdgeInsets.only(bottom: 10),
+                    decoration: BoxDecoration(
+                      color: AppColors.surfaceLight,
+                      borderRadius: BorderRadius.circular(14),
+                      border: Border.all(color: AppColors.border),
+                    ),
                     child: ListTile(
-                      leading: const Icon(Icons.assignment_outlined),
-                      title: Text(job.title),
-                      subtitle: Text('Job • ${_statusLabel(job.status)}'),
-                      trailing: Text(Formatters.formatDate(job.updatedAt)),
+                      leading: const Icon(Icons.assignment_outlined, color: AppColors.primaryColor),
+                      title: Text(job.title, style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
+                      subtitle: Text(
+                        'Job • ${_statusLabel(job.status)}',
+                        style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                      ),
+                      trailing: Text(
+                        Formatters.formatDate(job.updatedAt),
+                        style: AppTypography.captionSmall.copyWith(color: AppColors.textHint),
+                      ),
                     ),
                   );
                 }),
               ],
               const SizedBox(height: 20),
               OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.error,
+                  side: const BorderSide(color: AppColors.error),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                ),
                 onPressed: () async {
                   try {
                     await ref.read(signOutProvider.future);
@@ -197,24 +287,11 @@ class ClientProfileScreen extends ConsumerWidget {
                   }
                 },
                 icon: const Icon(Icons.logout),
-                label: const Text('Sign Out'),
+                label: Text('Sign Out', style: AppTypography.buttonText.copyWith(color: AppColors.error)),
               ),
             ],
           );
         },
-      ),
-    );
-  }
-
-  Widget _statRow(String label, String value) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(label),
-          Text(value, style: const TextStyle(fontWeight: FontWeight.w600)),
-        ],
       ),
     );
   }
@@ -249,7 +326,8 @@ class ClientProfileScreen extends ConsumerWidget {
     final shouldSave = await showDialog<bool>(
           context: context,
           builder: (context) => AlertDialog(
-            title: const Text('Edit Profile'),
+            backgroundColor: AppColors.surfaceLight,
+            title: Text('Edit Profile', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
             content: Form(
               key: formKey,
               child: Column(
@@ -258,12 +336,14 @@ class ClientProfileScreen extends ConsumerWidget {
                   TextFormField(
                     controller: nameCtrl,
                     decoration: const InputDecoration(labelText: 'Full Name'),
+                    style: const TextStyle(color: AppColors.textPrimary),
                     validator: Validators.validateName,
                   ),
                   const SizedBox(height: 10),
                   TextFormField(
                     controller: phoneCtrl,
                     decoration: const InputDecoration(labelText: 'Phone'),
+                    style: const TextStyle(color: AppColors.textPrimary),
                     keyboardType: TextInputType.phone,
                     validator: Validators.validatePhone,
                   ),
@@ -273,9 +353,13 @@ class ClientProfileScreen extends ConsumerWidget {
             actions: [
               TextButton(
                 onPressed: () => Navigator.pop(context, false),
-                child: const Text('Cancel'),
+                child: Text('Cancel', style: TextStyle(color: AppColors.textSecondary)),
               ),
               FilledButton(
+                style: FilledButton.styleFrom(
+                  backgroundColor: AppColors.primaryColor,
+                  foregroundColor: AppColors.textDark,
+                ),
                 onPressed: () {
                   if (formKey.currentState!.validate()) {
                     Navigator.pop(context, true);
@@ -312,5 +396,55 @@ class ClientProfileScreen extends ConsumerWidget {
         SnackBar(content: Text('Failed to update profile: $e')),
       );
     }
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  final String label;
+  final String value;
+  final IconData icon;
+  final bool smallValue;
+
+  const _StatCard({
+    required this.label,
+    required this.value,
+    required this.icon,
+    this.smallValue = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, size: 20, color: AppColors.primaryColor),
+          const Spacer(),
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              value,
+              style: smallValue
+                  ? AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)
+                  : AppTypography.statValue.copyWith(color: AppColors.textPrimary, fontSize: 22),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: AppTypography.captionSmall.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
   }
 }

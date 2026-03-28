@@ -4,6 +4,8 @@ import '../../providers/bid_provider.dart';
 import '../../providers/contract_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/user_provider.dart' as userp;
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/empty_state_widget.dart';
 import '../../widgets/common/loading_widget.dart';
@@ -38,10 +40,19 @@ class _ProviderProjectsScreenState extends ConsumerState<ProviderProjectsScreen>
     final contractsAsync = ref.watch(providerActiveContractsProvider);
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
-        title: const Text('Projects'),
+        title: Text('Projects', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
         bottom: TabBar(
           controller: _tabController,
+          indicatorColor: AppColors.primaryColor,
+          indicatorWeight: 3,
+          labelColor: AppColors.primaryColor,
+          unselectedLabelColor: AppColors.textHint,
+          labelStyle: AppTypography.labelLarge,
           tabs: [
             Tab(text: 'Bids (${bidsAsync.valueOrNull?.length ?? 0})'),
             Tab(text: 'Contracts (${contractsAsync.valueOrNull?.length ?? 0})'),
@@ -49,6 +60,8 @@ class _ProviderProjectsScreenState extends ConsumerState<ProviderProjectsScreen>
         ),
       ),
       body: RefreshIndicator(
+        color: AppColors.primaryColor,
+        backgroundColor: AppColors.surfaceLight,
         onRefresh: () async {
           ref.invalidate(providerBidsProvider);
           ref.invalidate(providerPendingBidsProvider);
@@ -210,8 +223,8 @@ class _ProjectCard extends StatelessWidget {
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFFE5ECEC)),
-          color: Colors.white,
+          border: Border.all(color: AppColors.border),
+          color: AppColors.surfaceLight,
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -220,8 +233,8 @@ class _ProjectCard extends StatelessWidget {
               children: [
                 CircleAvatar(
                   radius: 16,
-                  backgroundColor: const Color(0xFFE6F4F3),
-                  child: Icon(icon, size: 17, color: const Color(0xFF0B6E6E)),
+                  backgroundColor: AppColors.surfaceVariant,
+                  child: Icon(icon, size: 17, color: AppColors.primaryColor),
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -229,7 +242,7 @@ class _ProjectCard extends StatelessWidget {
                     title,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: const TextStyle(fontWeight: FontWeight.w700),
+                    style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
                   ),
                 ),
                 _StatusPill(status: status),
@@ -238,7 +251,7 @@ class _ProjectCard extends StatelessWidget {
             const SizedBox(height: 8),
             Text(
               subtitle,
-              style: TextStyle(color: Colors.grey.shade700),
+              style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
             ),
             const SizedBox(height: 12),
             Row(
@@ -265,9 +278,9 @@ class _CardMeta extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: TextStyle(fontSize: 12, color: Colors.grey.shade600)),
+        Text(label, style: AppTypography.caption.copyWith(color: AppColors.textHint)),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+        Text(value, style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
       ],
     );
   }
@@ -281,13 +294,13 @@ class _StatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (background, foreground, label) = switch (status) {
-      'accepted' => (const Color(0xFFDCFCE7), const Color(0xFF166534), 'Accepted'),
-      'active' => (const Color(0xFFDCFCE7), const Color(0xFF166534), 'Active'),
-      'completed' => (const Color(0xFFDBEAFE), const Color(0xFF1D4ED8), 'Completed'),
-      'rejected' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Rejected'),
-      'cancelled' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Cancelled'),
-      'terminated' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Terminated'),
-      _ => (const Color(0xFFFEF3C7), const Color(0xFF92400E), 'Pending'),
+      'accepted' => (AppColors.successLight, AppColors.success, 'Accepted'),
+      'active' => (AppColors.successLight, AppColors.success, 'Active'),
+      'completed' => (AppColors.infoLight, AppColors.info, 'Completed'),
+      'rejected' => (AppColors.errorLight, AppColors.error, 'Rejected'),
+      'cancelled' => (AppColors.errorLight, AppColors.error, 'Cancelled'),
+      'terminated' => (AppColors.errorLight, AppColors.error, 'Terminated'),
+      _ => (AppColors.warningLight, AppColors.warning, 'Pending'),
     };
 
     return Container(
@@ -298,7 +311,7 @@ class _StatusPill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: foreground, fontSize: 11, fontWeight: FontWeight.w700),
+        style: AppTypography.labelSmall.copyWith(color: foreground),
       ),
     );
   }
@@ -319,7 +332,7 @@ class _ErrorList extends StatelessWidget {
           child: Center(
             child: Padding(
               padding: const EdgeInsets.all(16),
-              child: Text(message, textAlign: TextAlign.center),
+              child: Text(message, textAlign: TextAlign.center, style: TextStyle(color: AppColors.error)),
             ),
           ),
         ),

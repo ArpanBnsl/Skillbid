@@ -6,6 +6,8 @@ import '../../models/job/job_model.dart';
 import '../../providers/bid_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/user_provider.dart' as userp;
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/image_viewer.dart';
 import 'provider_place_bid_screen.dart';
@@ -23,25 +25,29 @@ class ProviderJobDetailScreen extends ConsumerWidget {
     final jobImagesAsync = ref.watch(jobImagesProvider(job.id));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Job Details')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: Text('Job Details', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          // Job header gradient card
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(24),
-              gradient: const LinearGradient(
-                colors: [Color(0xFFF7FBFB), Color(0xFFE7F6F5)],
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-              ),
+              borderRadius: BorderRadius.circular(20),
+              gradient: AppColors.cardGradient,
+              border: Border.all(color: AppColors.border),
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(job.title, style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w700)),
-                const SizedBox(height: 10),
+                Text(job.title, style: AppTypography.heading3.copyWith(color: AppColors.textPrimary)),
+                const SizedBox(height: 12),
                 Wrap(
                   spacing: 10,
                   runSpacing: 10,
@@ -53,55 +59,61 @@ class ProviderJobDetailScreen extends ConsumerWidget {
                   ],
                 ),
                 const SizedBox(height: 14),
-                Text(job.description, style: TextStyle(color: Colors.grey.shade800, height: 1.5)),
+                Text(job.description, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.5)),
               ],
             ),
           ),
           if (job.isImmediate) ...[
             const SizedBox(height: 10),
-            Card(
-              color: Colors.orange.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Row(
-                  children: [
-                    Icon(Icons.bolt, color: Colors.orange.shade800),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text('Immediate Service',
-                              style: TextStyle(fontWeight: FontWeight.w700)),
-                          if (job.expiresAt != null) ...[
-                            const SizedBox(height: 2),
-                            Builder(builder: (_) {
-                              final remaining = job.expiresAt!.difference(DateTime.now());
-                              final expired =
-                                  remaining.isNegative || remaining == Duration.zero;
-                              return Text(
-                                expired
-                                    ? 'Expired'
-                                    : 'Expires in ${remaining.inHours}h ${remaining.inMinutes.remainder(60)}m',
-                                style: TextStyle(
-                                  color: expired ? Colors.red : Colors.orange.shade900,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              );
-                            }),
-                          ],
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.warningLight,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.bolt, color: AppColors.warning),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text('Immediate Service',
+                            style: AppTypography.labelLarge.copyWith(color: AppColors.warning)),
+                        if (job.expiresAt != null) ...[
+                          const SizedBox(height: 2),
+                          Builder(builder: (_) {
+                            final remaining = job.expiresAt!.difference(DateTime.now());
+                            final expired =
+                                remaining.isNegative || remaining == Duration.zero;
+                            return Text(
+                              expired
+                                  ? 'Expired'
+                                  : 'Expires in ${remaining.inHours}h ${remaining.inMinutes.remainder(60)}m',
+                              style: AppTypography.caption.copyWith(
+                                color: expired ? AppColors.error : AppColors.warning,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            );
+                          }),
                         ],
-                      ),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
           if (job.jobLat != null && job.jobLng != null) ...[
             const SizedBox(height: 10),
-            Card(
+            Container(
               clipBehavior: Clip.hardEdge,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.border),
+              ),
               child: SizedBox(
                 height: 180,
                 child: FlutterMap(
@@ -115,7 +127,7 @@ class ProviderJobDetailScreen extends ConsumerWidget {
                   children: [
                     TileLayer(
                       urlTemplate:
-                          'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                          'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
                       subdomains: const ['a', 'b', 'c', 'd'],
                       userAgentPackageName: 'com.skillbid.app',
                     ),
@@ -125,8 +137,8 @@ class ProviderJobDetailScreen extends ConsumerWidget {
                           point: LatLng(job.jobLat!, job.jobLng!),
                           width: 36,
                           height: 36,
-                          child: const Icon(Icons.location_on,
-                              color: Colors.red, size: 32),
+                          child: Icon(Icons.location_on,
+                              color: AppColors.error, size: 32),
                         ),
                       ],
                     ),
@@ -136,19 +148,23 @@ class ProviderJobDetailScreen extends ConsumerWidget {
             ),
           ],
           const SizedBox(height: 16),
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Client', style: TextStyle(fontWeight: FontWeight.w700)),
-                  const SizedBox(height: 8),
-                  Text(clientAsync.valueOrNull?.fullName ?? 'Client'),
-                  const SizedBox(height: 4),
-                  Text('Posted ${Formatters.formatDate(job.createdAt)}'),
-                ],
-              ),
+          // Client info card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceLight,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Client', style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
+                const SizedBox(height: 8),
+                Text(clientAsync.valueOrNull?.fullName ?? 'Client', style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: 4),
+                Text('Posted ${Formatters.formatDate(job.createdAt)}', style: AppTypography.caption.copyWith(color: AppColors.textHint)),
+              ],
             ),
           ),
           const SizedBox(height: 16),
@@ -158,91 +174,133 @@ class ProviderJobDetailScreen extends ConsumerWidget {
             data: (images) {
               if (images.isEmpty) return const SizedBox.shrink();
 
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Client Reference Images', style: TextStyle(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 90,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: images.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 10),
-                          itemBuilder: (context, index) {
-                            final image = images[index];
-                            return GestureDetector(
-                              onTap: () => ImageViewer.showNetwork(context, image.imageUrl),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: Image.network(
-                                  image.imageUrl,
-                                  width: 90,
-                                  height: 90,
-                                  fit: BoxFit.cover,
-                                ),
+              return Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Client Reference Images', style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 90,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: images.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        itemBuilder: (context, index) {
+                          final image = images[index];
+                          return GestureDetector(
+                            onTap: () => ImageViewer.showNetwork(context, image.imageUrl),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.network(
+                                image.imageUrl,
+                                width: 90,
+                                height: 90,
+                                fit: BoxFit.cover,
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
           ),
           const SizedBox(height: 16),
           if (myBid != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Your Bid', style: TextStyle(fontWeight: FontWeight.w700)),
-                    const SizedBox(height: 10),
-                    Text('Status: ${myBid.status}'),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Your Bid', style: AppTypography.labelLarge.copyWith(color: AppColors.primaryColor)),
+                  const SizedBox(height: 10),
+                  _BidInfoRow(label: 'Status', value: myBid.status),
+                  const SizedBox(height: 6),
+                  _BidInfoRow(label: 'Amount', value: Formatters.formatCurrencyShort(myBid.amount)),
+                  if (myBid.estimatedDays != null) ...[
                     const SizedBox(height: 6),
-                    Text('Amount: ${Formatters.formatCurrencyShort(myBid.amount)}'),
-                    if (myBid.estimatedDays != null) ...[
-                      const SizedBox(height: 6),
-                      Text('Timeline: ${myBid.estimatedDays} days'),
-                    ],
-                    if (myBid.message?.trim().isNotEmpty == true) ...[
-                      const SizedBox(height: 10),
-                      Text(myBid.message!),
-                    ],
+                    _BidInfoRow(label: 'Timeline', value: '${myBid.estimatedDays} days'),
                   ],
-                ),
+                  if (myBid.message?.trim().isNotEmpty == true) ...[
+                    const SizedBox(height: 10),
+                    Text(myBid.message!, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                  ],
+                ],
               ),
             )
           else
-            FilledButton.icon(
-              onPressed: () async {
-                final placed = await Navigator.push<bool>(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => ProviderPlaceBidScreen(job: job),
-                  ),
-                );
+            SizedBox(
+              width: double.infinity,
+              height: 50,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: MaterialButton(
+                  onPressed: () async {
+                    final placed = await Navigator.push<bool>(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ProviderPlaceBidScreen(job: job),
+                      ),
+                    );
 
-                if (placed == true) {
-                  ref.invalidate(providerBidsProvider);
-                  if (!context.mounted) return;
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Bid placed successfully.')),
-                  );
-                }
-              },
-              icon: const Icon(Icons.gavel_outlined),
-              label: const Text('Place Bid'),
+                    if (placed == true) {
+                      ref.invalidate(providerBidsProvider);
+                      if (!context.mounted) return;
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: const Text('Bid placed successfully.'),
+                          backgroundColor: AppColors.successLight,
+                        ),
+                      );
+                    }
+                  },
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.gavel_outlined, color: AppColors.textDark),
+                      const SizedBox(width: 8),
+                      Text('Place Bid', style: AppTypography.buttonText.copyWith(color: AppColors.textDark)),
+                    ],
+                  ),
+                ),
+              ),
             ),
         ],
       ),
+    );
+  }
+}
+
+class _BidInfoRow extends StatelessWidget {
+  final String label;
+  final String value;
+  const _BidInfoRow({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Text('$label: ', style: AppTypography.caption.copyWith(color: AppColors.textHint)),
+        Text(value, style: AppTypography.labelMedium.copyWith(color: AppColors.textPrimary)),
+      ],
     );
   }
 }
@@ -258,15 +316,15 @@ class _DetailChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.teal.shade700),
+          Icon(icon, size: 16, color: AppColors.primaryColor),
           const SizedBox(width: 6),
-          Text(label),
+          Text(label, style: AppTypography.caption.copyWith(color: AppColors.textPrimary)),
         ],
       ),
     );

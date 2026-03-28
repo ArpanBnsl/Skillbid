@@ -8,6 +8,8 @@ import '../../providers/contract_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/user_provider.dart' as userp;
 import '../../services/tracking_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/image_viewer.dart';
 import 'provider_tracking_screen.dart';
@@ -63,140 +65,161 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
     final bidAsync = ref.watch(bidProvider(contract.bidId));
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Contract Details')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: Text('Contract Details', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          // ── Job Information ──
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Job Information', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                  const Divider(),
-                  Text(
-                    jobAsync.valueOrNull?.title ?? 'Project ${contract.jobId.substring(0, 8)}',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
-                  ),
-                  if (jobAsync.valueOrNull?.description != null) ...[
-                    const SizedBox(height: 6),
-                    Text(jobAsync.valueOrNull!.description, style: TextStyle(color: Colors.grey.shade700)),
-                  ],
+          // Job Information
+          _buildCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Job Information', style: AppTypography.labelLarge.copyWith(color: AppColors.primaryColor)),
+                Divider(color: AppColors.divider),
+                Text(
+                  jobAsync.valueOrNull?.title ?? 'Project ${contract.jobId.substring(0, 8)}',
+                  style: AppTypography.bodyLarge.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600),
+                ),
+                if (jobAsync.valueOrNull?.description != null) ...[
                   const SizedBox(height: 6),
-                  if (jobAsync.valueOrNull != null) ...[
-                    Text('Location: ${jobAsync.valueOrNull!.location}'),
-                    const SizedBox(height: 4),
-                    Text('Budget: ${Formatters.formatCurrencyShort(jobAsync.valueOrNull!.budget)}'),
-                  ],
+                  Text(jobAsync.valueOrNull!.description, style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
                 ],
-              ),
+                const SizedBox(height: 6),
+                if (jobAsync.valueOrNull != null) ...[
+                  Text('Location: ${jobAsync.valueOrNull!.location}', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Budget: ${Formatters.formatCurrencyShort(jobAsync.valueOrNull!.budget)}',
+                    style: AppTypography.labelMedium.copyWith(color: AppColors.primaryColor),
+                  ),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: 10),
 
-          // ── Bid Information ──
+          // Bid Information
           if (bidAsync.valueOrNull != null)
-            Card(
-              child: Padding(
-                padding: const EdgeInsets.all(16),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text('Bid Information', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                    const Divider(),
-                    Text('Agreed Amount: ${Formatters.formatCurrencyShort(bidAsync.valueOrNull!.amount)}'),
-                    if (bidAsync.valueOrNull!.estimatedDays != null) ...[
-                      const SizedBox(height: 4),
-                      Text('Timeline: ${bidAsync.valueOrNull!.estimatedDays} days'),
-                    ],
-                    if (bidAsync.valueOrNull!.message?.trim().isNotEmpty == true) ...[
-                      const SizedBox(height: 4),
-                      Text('Bid Note: ${bidAsync.valueOrNull!.message!}'),
-                    ],
+            _buildCard(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text('Bid Information', style: AppTypography.labelLarge.copyWith(color: AppColors.secondaryColor)),
+                  Divider(color: AppColors.divider),
+                  Text(
+                    'Agreed Amount: ${Formatters.formatCurrencyShort(bidAsync.valueOrNull!.amount)}',
+                    style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
+                  ),
+                  if (bidAsync.valueOrNull!.estimatedDays != null) ...[
+                    const SizedBox(height: 4),
+                    Text('Timeline: ${bidAsync.valueOrNull!.estimatedDays} days', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
                   ],
-                ),
+                  if (bidAsync.valueOrNull!.message?.trim().isNotEmpty == true) ...[
+                    const SizedBox(height: 4),
+                    Text('Bid Note: ${bidAsync.valueOrNull!.message!}', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                  ],
+                ],
               ),
             ),
           const SizedBox(height: 10),
 
-          // ── Contract Status ──
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text('Contract Status', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 15)),
-                  const Divider(),
-                  _ContractStatusPill(status: contract.status),
-                  const SizedBox(height: 10),
-                  Text('Provider: ${providerAsync.valueOrNull?.fullName ?? 'Provider'}'),
+          // Contract Status
+          _buildCard(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Contract Status', style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
+                Divider(color: AppColors.divider),
+                _ContractStatusPill(status: contract.status),
+                const SizedBox(height: 10),
+                Text('Provider: ${providerAsync.valueOrNull?.fullName ?? 'Provider'}', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: 6),
+                Text('Client: ${clientAsync.valueOrNull?.fullName ?? 'Client'}', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                const SizedBox(height: 6),
+                Text('Started: ${Formatters.formatDate(contract.createdAt)}', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary)),
+                if (contract.workSubmittedAt != null) ...[
                   const SizedBox(height: 6),
-                  Text('Client: ${clientAsync.valueOrNull?.fullName ?? 'Client'}'),
-                  const SizedBox(height: 6),
-                  Text('Started: ${Formatters.formatDate(contract.createdAt)}'),
-                  if (contract.workSubmittedAt != null) ...[
-                    const SizedBox(height: 6),
-                    Text('Work Submitted: ${Formatters.formatDateTime(contract.workSubmittedAt!)}'),
-                  ],
-                  if (contract.providerRating != null) ...[
-                    const SizedBox(height: 10),
-                    Text('Client Rating You Gave Provider: ${contract.providerRating}/5'),
-                  ],
-                  if (contract.clientRating != null) ...[
-                    const SizedBox(height: 6),
-                    Text('Your Rating For Client: ${contract.clientRating}/5'),
-                  ],
-                  if (contract.reviewText?.trim().isNotEmpty == true) ...[
-                    const SizedBox(height: 6),
-                    Text('Review: ${contract.reviewText}'),
-                  ],
-                  if (contract.terminatedBy != null) ...[
-                    const SizedBox(height: 6),
-                    Text('Terminated By: ${contract.terminatedBy}'),
-                  ],
+                  Text('Work Submitted: ${Formatters.formatDateTime(contract.workSubmittedAt!)}', style: AppTypography.bodySmall.copyWith(color: AppColors.success)),
                 ],
-              ),
+                if (contract.providerRating != null) ...[
+                  const SizedBox(height: 10),
+                  Text('Client Rating You Gave Provider: ${contract.providerRating}/5', style: AppTypography.bodySmall.copyWith(color: AppColors.warning)),
+                ],
+                if (contract.clientRating != null) ...[
+                  const SizedBox(height: 6),
+                  Text('Your Rating For Client: ${contract.clientRating}/5', style: AppTypography.bodySmall.copyWith(color: AppColors.warning)),
+                ],
+                if (contract.reviewText?.trim().isNotEmpty == true) ...[
+                  const SizedBox(height: 6),
+                  Text('Review: ${contract.reviewText}', style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary, fontStyle: FontStyle.italic)),
+                ],
+                if (contract.terminatedBy != null) ...[
+                  const SizedBox(height: 6),
+                  Text('Terminated By: ${contract.terminatedBy}', style: AppTypography.bodySmall.copyWith(color: AppColors.error)),
+                ],
+              ],
             ),
           ),
           const SizedBox(height: 14),
           if (contract.trackingEnabled)
-            Card(
-              color: Colors.blue.shade50,
-              child: Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Row(
-                      children: [
-                        Icon(Icons.location_on, color: Colors.blue),
-                        SizedBox(width: 10),
-                        Expanded(
-                          child: Text(
-                            'Live tracking is active — your location is being shared with the client.',
-                            style: TextStyle(fontWeight: FontWeight.w600),
-                          ),
+            Container(
+              padding: const EdgeInsets.all(14),
+              decoration: BoxDecoration(
+                color: AppColors.infoLight,
+                borderRadius: BorderRadius.circular(14),
+                border: Border.all(color: AppColors.info.withValues(alpha: 0.3)),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Icon(Icons.location_on, color: AppColors.info),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Live tracking is active — your location is being shared with the client.',
+                          style: AppTypography.bodySmall.copyWith(color: AppColors.info, fontWeight: FontWeight.w600),
                         ),
-                      ],
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 10),
+                  SizedBox(
+                    width: double.infinity,
+                    child: DecoratedBox(
+                      decoration: BoxDecoration(
+                        gradient: AppColors.primaryGradient,
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: MaterialButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => ProviderTrackingScreen(contract: contract),
+                            ),
+                          );
+                        },
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.navigation_outlined, color: AppColors.textDark),
+                            const SizedBox(width: 8),
+                            Text('Open Navigation', style: AppTypography.buttonText.copyWith(color: AppColors.textDark)),
+                          ],
+                        ),
+                      ),
                     ),
-                    const SizedBox(height: 10),
-                    FilledButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (_) => ProviderTrackingScreen(contract: contract),
-                          ),
-                        );
-                      },
-                      icon: const Icon(Icons.navigation_outlined),
-                      label: const Text('Open Navigation'),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           if (contract.trackingEnabled) const SizedBox(height: 10),
@@ -205,79 +228,134 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
             error: (_, __) => const SizedBox.shrink(),
             data: (images) {
               if (images.isEmpty) return const SizedBox.shrink();
-              return Card(
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text('Client Reference Images', style: TextStyle(fontWeight: FontWeight.w700)),
-                      const SizedBox(height: 10),
-                      SizedBox(
-                        height: 90,
-                        child: ListView.separated(
-                          scrollDirection: Axis.horizontal,
-                          itemCount: images.length,
-                          separatorBuilder: (_, __) => const SizedBox(width: 10),
-                          itemBuilder: (context, index) {
-                            final image = images[index];
-                            return GestureDetector(
-                              onTap: () => ImageViewer.showNetwork(context, image.imageUrl),
-                              child: ClipRRect(
-                                borderRadius: BorderRadius.circular(14),
-                                child: Image.network(
-                                  image.imageUrl,
-                                  width: 90,
-                                  height: 90,
-                                  fit: BoxFit.cover,
-                                ),
+              return _buildCard(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Client Reference Images', style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary)),
+                    const SizedBox(height: 10),
+                    SizedBox(
+                      height: 90,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: images.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        itemBuilder: (context, index) {
+                          final image = images[index];
+                          return GestureDetector(
+                            onTap: () => ImageViewer.showNetwork(context, image.imageUrl),
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(14),
+                              child: Image.network(
+                                image.imageUrl,
+                                width: 90,
+                                height: 90,
+                                fit: BoxFit.cover,
                               ),
-                            );
-                          },
-                        ),
+                            ),
+                          );
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               );
             },
           ),
           const SizedBox(height: 14),
           if (contract.status == AppConstants.contractStatusActive) ...[
-            FilledButton.icon(
-              onPressed: _processing ? null : () => _submitWork(contract.id),
-              icon: _processing
-                  ? const SizedBox(
-                      width: 18,
-                      height: 18,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.upload_file_outlined),
-              label: const Text('Submit Work For Approval'),
+            SizedBox(
+              width: double.infinity,
+              height: 48,
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: AppColors.primaryGradient,
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: MaterialButton(
+                  onPressed: _processing ? null : () => _submitWork(contract.id),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  child: _processing
+                      ? SizedBox(width: 20, height: 20, child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textDark))
+                      : Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(Icons.upload_file_outlined, color: AppColors.textDark),
+                            const SizedBox(width: 8),
+                            Text('Submit Work For Approval', style: AppTypography.buttonText.copyWith(color: AppColors.textDark)),
+                          ],
+                        ),
+                ),
+              ),
             ),
             const SizedBox(height: 10),
-            OutlinedButton.icon(
-              onPressed: _processing ? null : () => _confirmTerminate(contract.id),
-              icon: const Icon(Icons.cancel_outlined),
-              label: const Text('Terminate Contract'),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _processing ? null : () => _confirmTerminate(contract.id),
+                icon: Icon(Icons.cancel_outlined, color: AppColors.error),
+                label: Text('Terminate Contract', style: AppTypography.buttonText.copyWith(color: AppColors.error)),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.error.withValues(alpha: 0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
             ),
             const SizedBox(height: 10),
           ],
           if (contract.status == AppConstants.contractStatusCompleted && contract.clientRating == null) ...[
-            OutlinedButton.icon(
-              onPressed: _processing ? null : () => _rateClient(contract.id),
-              icon: const Icon(Icons.star_outline),
-              label: const Text('Rate Client'),
+            SizedBox(
+              width: double.infinity,
+              child: OutlinedButton.icon(
+                onPressed: _processing ? null : () => _rateClient(contract.id),
+                icon: Icon(Icons.star_outline, color: AppColors.warning),
+                label: Text('Rate Client', style: AppTypography.buttonText.copyWith(color: AppColors.warning)),
+                style: OutlinedButton.styleFrom(
+                  side: BorderSide(color: AppColors.warning.withValues(alpha: 0.5)),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                ),
+              ),
             ),
             const SizedBox(height: 10),
           ],
-          FilledButton.icon(
-            onPressed: () => _openChat(contract, jobAsync.valueOrNull?.title),
-            icon: const Icon(Icons.chat_outlined),
-            label: const Text('Open Contract Chat'),
+          SizedBox(
+            width: double.infinity,
+            height: 48,
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: AppColors.purpleGradient,
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: MaterialButton(
+                onPressed: () => _openChat(contract, jobAsync.valueOrNull?.title),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(Icons.chat_outlined, color: AppColors.textPrimary),
+                    const SizedBox(width: 8),
+                    Text('Open Contract Chat', style: AppTypography.buttonText.copyWith(color: AppColors.textPrimary)),
+                  ],
+                ),
+              ),
+            ),
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildCard({required Widget child}) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.surfaceLight,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: AppColors.border),
+      ),
+      child: child,
     );
   }
 
@@ -304,11 +382,22 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Terminate Contract'),
-        content: const Text('Are you sure you want to terminate this contract? This cannot be undone.'),
+        backgroundColor: AppColors.surfaceLight,
+        title: Text('Terminate Contract', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        content: Text(
+          'Are you sure you want to terminate this contract? This cannot be undone.',
+          style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+        ),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('No')),
-          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Terminate')),
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: Text('No', style: TextStyle(color: AppColors.textHint)),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(backgroundColor: AppColors.error),
+            child: Text('Terminate', style: TextStyle(color: AppColors.textPrimary)),
+          ),
         ],
       ),
     );
@@ -344,7 +433,8 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
       context: context,
       builder: (context) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Rate Client'),
+          backgroundColor: AppColors.surfaceLight,
+          title: Text('Rate Client', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
           content: Wrap(
             spacing: 4,
             children: List.generate(5, (index) {
@@ -353,14 +443,21 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
                 onPressed: () => setDialogState(() => selectedRating = star),
                 icon: Icon(
                   star <= selectedRating ? Icons.star : Icons.star_border,
-                  color: const Color(0xFFCA8A04),
+                  color: AppColors.warning,
                 ),
               );
             }),
           ),
           actions: [
-            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
-            FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Submit')),
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Cancel', style: TextStyle(color: AppColors.textHint)),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: FilledButton.styleFrom(backgroundColor: AppColors.primaryColor),
+              child: Text('Submit', style: TextStyle(color: AppColors.textDark)),
+            ),
           ],
         ),
       ),
@@ -448,10 +545,10 @@ class _ContractStatusPill extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (background, foreground, label) = switch (status) {
-      'active' => (const Color(0xFFDCFCE7), const Color(0xFF166534), 'Active'),
-      'completed' => (const Color(0xFFDBEAFE), const Color(0xFF1D4ED8), 'Completed'),
-      'terminated' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B), 'Terminated'),
-      _ => (const Color(0xFFE5E7EB), const Color(0xFF374151), status),
+      'active' => (AppColors.successLight, AppColors.success, 'Active'),
+      'completed' => (AppColors.infoLight, AppColors.info, 'Completed'),
+      'terminated' => (AppColors.errorLight, AppColors.error, 'Terminated'),
+      _ => (AppColors.surfaceVariant, AppColors.textHint, status),
     };
 
     return Container(
@@ -462,7 +559,7 @@ class _ContractStatusPill extends StatelessWidget {
       ),
       child: Text(
         label,
-        style: TextStyle(color: foreground, fontWeight: FontWeight.w700),
+        style: AppTypography.labelSmall.copyWith(color: foreground),
       ),
     );
   }

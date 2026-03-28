@@ -8,6 +8,8 @@ import '../../providers/auth_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/portfolio_provider.dart';
 import '../../providers/user_provider.dart' as userp;
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/validators.dart';
 import '../../widgets/common/image_viewer.dart';
 
@@ -51,7 +53,10 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to pick images: $e')),
+        SnackBar(
+          content: Text('Unable to pick images: $e'),
+          backgroundColor: AppColors.error,
+        ),
       );
     }
   }
@@ -70,7 +75,10 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
     if (!_formKey.currentState!.validate()) return;
     if (_selectedSkillIds.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Select at least one skill.')),
+        const SnackBar(
+          content: Text('Select at least one skill.'),
+          backgroundColor: AppColors.warning,
+        ),
       );
       return;
     }
@@ -78,7 +86,10 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
     final userId = ref.read(currentUserIdProvider);
     if (userId == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('You are not signed in.')),
+        const SnackBar(
+          content: Text('You are not signed in.'),
+          backgroundColor: AppColors.error,
+        ),
       );
       return;
     }
@@ -126,12 +137,18 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
       if (!mounted) return;
       context.go('/provider');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Service Provider profile created.')),
+        const SnackBar(
+          content: Text('Service Provider profile created.'),
+          backgroundColor: AppColors.success,
+        ),
       );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to finish onboarding: $e')),
+        SnackBar(
+          content: Text('Failed to finish onboarding: $e'),
+          backgroundColor: AppColors.error,
+        ),
       );
     } finally {
       if (mounted) setState(() => _submitting = false);
@@ -139,14 +156,41 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
   }
 
   Future<bool> _handleBackNavigation() async {
-    // Prevent back navigation while submitting
     if (_submitting) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please wait for the operation to complete.')),
+        const SnackBar(
+          content: Text('Please wait for the operation to complete.'),
+          backgroundColor: AppColors.warning,
+        ),
       );
       return false;
     }
     return true;
+  }
+
+  InputDecoration _inputDecoration(String label) {
+    return InputDecoration(
+      labelText: label,
+      labelStyle: const TextStyle(color: AppColors.textSecondary),
+      filled: true,
+      fillColor: AppColors.surfaceLight,
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.borderFocus, width: 1.5),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.error),
+      ),
+      focusedErrorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+      ),
+    );
   }
 
   @override
@@ -160,8 +204,16 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
         await _handleBackNavigation();
       },
       child: Scaffold(
+        backgroundColor: AppColors.surface,
         appBar: AppBar(
-          title: const Text('Service Provider Setup'),
+          backgroundColor: AppColors.surface,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          title: Text(
+            'Service Provider Setup',
+            style: AppTypography.heading4.copyWith(color: AppColors.textPrimary),
+          ),
+          iconTheme: const IconThemeData(color: AppColors.textPrimary),
           leading: _submitting
               ? const SizedBox(
                   width: 40,
@@ -169,15 +221,27 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
                     child: SizedBox(
                       width: 20,
                       height: 20,
-                      child: CircularProgressIndicator(strokeWidth: 2),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        valueColor: AlwaysStoppedAnimation(AppColors.primaryColor),
+                      ),
                     ),
                   ),
                 )
               : null,
         ),
         body: skillsAsync.when(
-          loading: () => const Center(child: CircularProgressIndicator()),
-          error: (e, _) => Center(child: Text('Failed to load skills: $e')),
+          loading: () => const Center(
+            child: CircularProgressIndicator(
+              valueColor: AlwaysStoppedAnimation(AppColors.primaryColor),
+            ),
+          ),
+          error: (e, _) => Center(
+            child: Text(
+              'Failed to load skills: $e',
+              style: AppTypography.bodyMedium.copyWith(color: AppColors.error),
+            ),
+          ),
           data: (skills) => SingleChildScrollView(
             padding: const EdgeInsets.all(16),
             child: Form(
@@ -185,41 +249,83 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text('Build your service provider profile to start receiving project bids.'),
-                  const SizedBox(height: 14),
+                  Text(
+                    'Build your service provider profile to start receiving project bids.',
+                    style: AppTypography.bodySmall.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+
+                  // Bio
                   TextFormField(
                     controller: _bioCtrl,
                     maxLines: 3,
-                    decoration: const InputDecoration(labelText: 'Bio'),
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    cursorColor: AppColors.primaryColor,
+                    decoration: _inputDecoration('Bio'),
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
+
+                  // Experience
                   TextFormField(
                     controller: _expCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Experience Years'),
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    cursorColor: AppColors.primaryColor,
+                    decoration: _inputDecoration('Experience Years'),
                     validator: (value) {
                       final parsed = int.tryParse(value ?? '');
                       if (parsed == null || parsed < 0) return 'Enter valid experience years';
                       return null;
                     },
                   ),
-                  const SizedBox(height: 12),
+                  const SizedBox(height: 14),
+
+                  // Hourly rate
                   TextFormField(
                     controller: _rateCtrl,
                     keyboardType: TextInputType.number,
-                    decoration: const InputDecoration(labelText: 'Hourly Rate (optional)'),
+                    style: const TextStyle(color: AppColors.textPrimary),
+                    cursorColor: AppColors.primaryColor,
+                    decoration: _inputDecoration('Hourly Rate (optional)'),
                   ),
-                  const SizedBox(height: 16),
-                  Text('Skills', style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 22),
+
+                  // Skills section
+                  Text(
+                    'Skills',
+                    style: AppTypography.heading4.copyWith(
+                      color: AppColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   Wrap(
                     spacing: 8,
                     runSpacing: 8,
                     children: skills
                         .map(
                           (skill) => FilterChip(
-                            label: Text(skill.name),
+                            label: Text(
+                              skill.name,
+                              style: TextStyle(
+                                color: _selectedSkillIds.contains(skill.id)
+                                    ? AppColors.textDark
+                                    : AppColors.textSecondary,
+                              ),
+                            ),
                             selected: _selectedSkillIds.contains(skill.id),
+                            selectedColor: AppColors.primaryColor,
+                            backgroundColor: AppColors.surfaceLight,
+                            checkmarkColor: AppColors.textDark,
+                            side: BorderSide(
+                              color: _selectedSkillIds.contains(skill.id)
+                                  ? AppColors.primaryColor
+                                  : AppColors.border,
+                            ),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(20),
+                            ),
                             onSelected: (selected) {
                               setState(() {
                                 if (selected) {
@@ -233,15 +339,27 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
                         )
                         .toList(),
                   ),
-                  const SizedBox(height: 18),
+                  const SizedBox(height: 24),
+
+                  // Past Works section
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Text('Past Works', style: Theme.of(context).textTheme.titleMedium),
+                      Text(
+                        'Past Works',
+                        style: AppTypography.heading4.copyWith(
+                          color: AppColors.textPrimary,
+                        ),
+                      ),
                       TextButton.icon(
                         onPressed: _submitting ? null : _addPastWorkDraft,
-                        icon: const Icon(Icons.add),
-                        label: const Text('Add More'),
+                        icon: const Icon(Icons.add, color: AppColors.primaryColor),
+                        label: Text(
+                          'Add More',
+                          style: AppTypography.labelLarge.copyWith(
+                            color: AppColors.primaryColor,
+                          ),
+                        ),
                       ),
                     ],
                   ),
@@ -249,71 +367,105 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
                   ..._portfolioDrafts.map(
                     (draft) => Padding(
                       padding: const EdgeInsets.only(bottom: 14),
-                      child: Card(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          gradient: AppColors.cardGradient,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.border),
+                        ),
                         child: Padding(
-                          padding: const EdgeInsets.all(14),
+                          padding: const EdgeInsets.all(16),
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Row(
                                 children: [
-                                  const Expanded(
+                                  Expanded(
                                     child: Text(
                                       'Past Work',
-                                      style: TextStyle(fontWeight: FontWeight.w700),
+                                      style: AppTypography.labelLarge.copyWith(
+                                        color: AppColors.textPrimary,
+                                      ),
                                     ),
                                   ),
                                   if (_portfolioDrafts.length > 1)
                                     IconButton(
-                                      onPressed: _submitting ? null : () => _removePastWorkDraft(draft),
-                                      icon: const Icon(Icons.delete_outline),
+                                      onPressed: _submitting
+                                          ? null
+                                          : () => _removePastWorkDraft(draft),
+                                      icon: const Icon(
+                                        Icons.delete_outline,
+                                        color: AppColors.error,
+                                      ),
                                     ),
                                 ],
                               ),
+                              const SizedBox(height: 8),
                               TextFormField(
                                 controller: draft.titleCtrl,
-                                decoration: const InputDecoration(labelText: 'Title'),
+                                style: const TextStyle(color: AppColors.textPrimary),
+                                cursorColor: AppColors.primaryColor,
+                                decoration: _inputDecoration('Title'),
                                 validator: Validators.validateTitle,
                               ),
                               const SizedBox(height: 12),
                               TextFormField(
                                 controller: draft.descCtrl,
                                 maxLines: 4,
-                                decoration: const InputDecoration(labelText: 'Description'),
+                                style: const TextStyle(color: AppColors.textPrimary),
+                                cursorColor: AppColors.primaryColor,
+                                decoration: _inputDecoration('Description'),
                                 validator: Validators.validateDescription,
                               ),
                               const SizedBox(height: 12),
                               TextFormField(
                                 controller: draft.costCtrl,
                                 keyboardType: TextInputType.number,
-                                decoration: const InputDecoration(labelText: 'Project Cost (optional)'),
+                                style: const TextStyle(color: AppColors.textPrimary),
+                                cursorColor: AppColors.primaryColor,
+                                decoration: _inputDecoration('Project Cost (optional)'),
                                 validator: (value) {
                                   if (value == null || value.trim().isEmpty) return null;
                                   return Validators.validateAmount(value);
                                 },
                               ),
-                              const SizedBox(height: 12),
+                              const SizedBox(height: 14),
                               OutlinedButton.icon(
                                 onPressed: _submitting ? null : () => _pickImages(draft),
-                                icon: const Icon(Icons.add_photo_alternate_outlined),
-                                label: Text('Add Work Images (${draft.images.length}/4)'),
+                                icon: const Icon(
+                                  Icons.add_photo_alternate_outlined,
+                                  color: AppColors.primaryColor,
+                                ),
+                                label: Text(
+                                  'Add Work Images (${draft.images.length}/4)',
+                                  style: const TextStyle(color: AppColors.primaryColor),
+                                ),
+                                style: OutlinedButton.styleFrom(
+                                  side: const BorderSide(color: AppColors.border),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                ),
                               ),
                               if (draft.images.isNotEmpty) ...[
-                                const SizedBox(height: 10),
+                                const SizedBox(height: 12),
                                 SizedBox(
                                   height: 74,
                                   child: ListView.separated(
                                     scrollDirection: Axis.horizontal,
                                     itemCount: draft.images.length,
-                                    separatorBuilder: (context, _) => const SizedBox(width: 8),
+                                    separatorBuilder: (context, _) =>
+                                        const SizedBox(width: 8),
                                     itemBuilder: (context, index) {
                                       final image = draft.images[index];
                                       return Stack(
                                         children: [
                                           GestureDetector(
-                                            onTap: () => ImageViewer.showFile(context, image.path),
+                                            onTap: () => ImageViewer.showFile(
+                                                context, image.path),
                                             child: ClipRRect(
-                                              borderRadius: BorderRadius.circular(12),
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
                                               child: Image.file(
                                                 File(image.path),
                                                 width: 74,
@@ -326,14 +478,19 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
                                             right: 4,
                                             top: 4,
                                             child: GestureDetector(
-                                              onTap: () => setState(() => draft.images.removeAt(index)),
+                                              onTap: () => setState(
+                                                  () => draft.images.removeAt(index)),
                                               child: Container(
                                                 decoration: const BoxDecoration(
-                                                  color: Colors.black54,
+                                                  color: AppColors.surfaceVariant,
                                                   shape: BoxShape.circle,
                                                 ),
                                                 padding: const EdgeInsets.all(2),
-                                                child: const Icon(Icons.close, color: Colors.white, size: 14),
+                                                child: const Icon(
+                                                  Icons.close,
+                                                  color: AppColors.textPrimary,
+                                                  size: 14,
+                                                ),
                                               ),
                                             ),
                                           ),
@@ -349,20 +506,55 @@ class _ProviderOnboardingScreenState extends ConsumerState<ProviderOnboardingScr
                       ),
                     ),
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
+
+                  // Submit button
                   SizedBox(
                     width: double.infinity,
-                    child: FilledButton(
-                      onPressed: _submitting ? null : _submit,
-                      child: _submitting
-                          ? const SizedBox(
-                              width: 18,
-                              height: 18,
-                              child: CircularProgressIndicator(strokeWidth: 2),
-                            )
-                          : const Text('Complete Setup'),
+                    height: 52,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        gradient: _submitting ? null : AppColors.primaryGradient,
+                        color: _submitting ? AppColors.surfaceVariant : null,
+                        borderRadius: BorderRadius.circular(12),
+                        boxShadow: _submitting
+                            ? null
+                            : [
+                                const BoxShadow(
+                                  color: AppColors.glowTeal,
+                                  blurRadius: 12,
+                                  offset: Offset(0, 4),
+                                ),
+                              ],
+                      ),
+                      child: Material(
+                        color: AppColors.transparent,
+                        child: InkWell(
+                          onTap: _submitting ? null : _submit,
+                          borderRadius: BorderRadius.circular(12),
+                          child: Center(
+                            child: _submitting
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation(
+                                          AppColors.textPrimary),
+                                    ),
+                                  )
+                                : Text(
+                                    'Complete Setup',
+                                    style: AppTypography.buttonText.copyWith(
+                                      color: AppColors.textDark,
+                                    ),
+                                  ),
+                          ),
+                        ),
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),

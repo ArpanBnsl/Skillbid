@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/bid_provider.dart';
 import '../../providers/job_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/empty_state_widget.dart';
 import '../../widgets/common/loading_widget.dart';
@@ -15,8 +17,16 @@ class ProviderBidsScreen extends ConsumerWidget {
     final bidsAsync = ref.watch(providerBidsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('My Bids')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: Text('My Bids', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: RefreshIndicator(
+        color: AppColors.primaryColor,
+        backgroundColor: AppColors.surfaceLight,
         onRefresh: () async {
           ref.invalidate(providerBidsProvider);
           await ref.read(providerBidsProvider.future);
@@ -29,7 +39,7 @@ class ProviderBidsScreen extends ConsumerWidget {
               SizedBox(
                 height: 500,
                 child: Center(
-                  child: Text('Failed to load bids:\n$e', textAlign: TextAlign.center),
+                  child: Text('Failed to load bids:\n$e', textAlign: TextAlign.center, style: TextStyle(color: AppColors.error)),
                 ),
               ),
             ],
@@ -76,9 +86,9 @@ class ProviderBidsScreen extends ConsumerWidget {
                   child: Ink(
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: AppColors.surfaceLight,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFE4ECEC)),
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -88,7 +98,7 @@ class ProviderBidsScreen extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 jobTitle,
-                                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+                                style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w700),
                               ),
                             ),
                             _BidStatusBadge(status: bid.status),
@@ -99,7 +109,7 @@ class ProviderBidsScreen extends ConsumerWidget {
                           spacing: 12,
                           runSpacing: 12,
                           children: [
-                            _BidMeta(label: 'Your bid', value: Formatters.formatCurrencyShort(bid.amount)),
+                            _BidMeta(label: 'Your bid', value: Formatters.formatCurrencyShort(bid.amount), valueColor: AppColors.primaryColor),
                             if (bid.estimatedDays != null)
                               _BidMeta(label: 'Timeline', value: '${bid.estimatedDays} days'),
                             _BidMeta(label: 'Submitted', value: Formatters.formatDate(bid.createdAt)),
@@ -111,7 +121,7 @@ class ProviderBidsScreen extends ConsumerWidget {
                             bid.message!,
                             maxLines: 2,
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(color: Colors.grey.shade700),
+                            style: AppTypography.bodySmall.copyWith(color: AppColors.textHint),
                           ),
                         ],
                       ],
@@ -135,10 +145,10 @@ class _BidStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final (background, foreground) = switch (status) {
-      'accepted' => (const Color(0xFFDCFCE7), const Color(0xFF166534)),
-      'rejected' => (const Color(0xFFFEE2E2), const Color(0xFF991B1B)),
-      'withdrawn' => (const Color(0xFFE5E7EB), const Color(0xFF374151)),
-      _ => (const Color(0xFFFEF3C7), const Color(0xFF92400E)),
+      'accepted' => (AppColors.successLight, AppColors.success),
+      'rejected' => (AppColors.errorLight, AppColors.error),
+      'withdrawn' => (AppColors.surfaceVariant, AppColors.textHint),
+      _ => (AppColors.warningLight, AppColors.warning),
     };
 
     return Container(
@@ -149,11 +159,7 @@ class _BidStatusBadge extends StatelessWidget {
       ),
       child: Text(
         status.toUpperCase(),
-        style: TextStyle(
-          color: foreground,
-          fontWeight: FontWeight.w700,
-          fontSize: 11,
-        ),
+        style: AppTypography.labelSmall.copyWith(color: foreground),
       ),
     );
   }
@@ -162,8 +168,9 @@ class _BidStatusBadge extends StatelessWidget {
 class _BidMeta extends StatelessWidget {
   final String label;
   final String value;
+  final Color? valueColor;
 
-  const _BidMeta({required this.label, required this.value});
+  const _BidMeta({required this.label, required this.value, this.valueColor});
 
   @override
   Widget build(BuildContext context) {
@@ -172,10 +179,13 @@ class _BidMeta extends StatelessWidget {
       children: [
         Text(
           label,
-          style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+          style: AppTypography.caption.copyWith(color: AppColors.textHint),
         ),
         const SizedBox(height: 2),
-        Text(value, style: const TextStyle(fontWeight: FontWeight.w700)),
+        Text(
+          value,
+          style: AppTypography.labelLarge.copyWith(color: valueColor ?? AppColors.textPrimary),
+        ),
       ],
     );
   }

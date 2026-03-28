@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/loading_widget.dart';
 
@@ -74,25 +76,31 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
     final isClosed = chatOverviewAsync.valueOrNull?.isClosed ?? false;
 
     return Scaffold(
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
         title: chatOverviewAsync.when(
           data: (chat) {
             if (chat == null) {
-              return Text(widget.initialTitle ?? 'Chat');
+              return Text(widget.initialTitle ?? 'Chat', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary));
             }
             final projectTitle = chat.jobTitle ?? 'Contract Chat';
             return Text(
               projectTitle,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: AppTypography.heading4.copyWith(color: AppColors.textPrimary),
             );
           },
-          loading: () => Text(widget.initialTitle ?? 'Chat'),
-          error: (_, __) => Text(widget.initialTitle ?? 'Chat'),
+          loading: () => Text(widget.initialTitle ?? 'Chat', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+          error: (_, __) => Text(widget.initialTitle ?? 'Chat', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
         ),
       ),
       body: Column(
         children: [
+          // Header bar
           chatOverviewAsync.when(
             data: (chat) {
               if (chat == null) return const SizedBox.shrink();
@@ -103,29 +111,30 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               return Container(
                 width: double.infinity,
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-                color: Colors.grey.shade100,
+                color: AppColors.surfaceVariant,
                 child: Text(
                   '$projectTitle | $otherParticipant',
-                  style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                  style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary),
                 ),
               );
             },
             loading: () => const SizedBox.shrink(),
             error: (_, __) => const SizedBox.shrink(),
           ),
+          // Closed notice
           if (isClosed)
             Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              color: Colors.orange.shade50,
+              color: AppColors.warningLight,
               child: Row(
                 children: [
-                  Icon(Icons.lock_outline, size: 16, color: Colors.orange.shade800),
+                  Icon(Icons.lock_outline, size: 16, color: AppColors.warning),
                   const SizedBox(width: 8),
                   Expanded(
                     child: Text(
                       'This chat is closed. The contract is no longer active.',
-                      style: TextStyle(fontSize: 13, color: Colors.orange.shade800),
+                      style: AppTypography.caption.copyWith(color: AppColors.warning),
                     ),
                   ),
                 ],
@@ -137,18 +146,18 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               error: (error, _) => Center(
                 child: Padding(
                   padding: const EdgeInsets.all(16),
-                  child: Text('Failed to load messages:\n$error', textAlign: TextAlign.center),
+                  child: Text('Failed to load messages:\n$error', textAlign: TextAlign.center, style: TextStyle(color: AppColors.error)),
                 ),
               ),
               data: (messages) {
                 if (messages.isEmpty) {
                   if (isClosed) {
-                    return const Center(
-                      child: Text('This conversation is closed.'),
+                    return Center(
+                      child: Text('This conversation is closed.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textHint)),
                     );
                   }
-                  return const Center(
-                    child: Text('No messages yet. Start the conversation.'),
+                  return Center(
+                    child: Text('No messages yet. Start the conversation.', style: AppTypography.bodyMedium.copyWith(color: AppColors.textHint)),
                   );
                 }
 
@@ -170,6 +179,7 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
               },
             ),
           ),
+          // Input bar
           SafeArea(
             top: false,
             child: isClosed
@@ -177,8 +187,8 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                 : Container(
               padding: const EdgeInsets.fromLTRB(10, 8, 10, 8),
               decoration: BoxDecoration(
-                color: Colors.white,
-                border: Border(top: BorderSide(color: Colors.grey.shade200)),
+                color: AppColors.surfaceLight,
+                border: Border(top: BorderSide(color: AppColors.border)),
               ),
               child: Row(
                 children: [
@@ -189,13 +199,23 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                       maxLines: 4,
                       textInputAction: TextInputAction.send,
                       onSubmitted: (_) => _sendMessage(),
+                      style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
                       decoration: InputDecoration(
                         hintText: 'Type a message...',
+                        hintStyle: AppTypography.bodySmall.copyWith(color: AppColors.textHint),
                         filled: true,
-                        fillColor: Colors.grey.shade100,
+                        fillColor: AppColors.surfaceVariant,
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(22),
-                          borderSide: BorderSide.none,
+                          borderSide: BorderSide(color: AppColors.border),
+                        ),
+                        enabledBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(22),
+                          borderSide: BorderSide(color: AppColors.border),
+                        ),
+                        focusedBorder: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(22),
+                          borderSide: BorderSide(color: AppColors.borderFocus),
                         ),
                         contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                       ),
@@ -205,12 +225,12 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
                   IconButton(
                     onPressed: _sending ? null : _sendMessage,
                     icon: _sending
-                        ? const SizedBox(
+                        ? SizedBox(
                             width: 18,
                             height: 18,
-                            child: CircularProgressIndicator(strokeWidth: 2),
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.primaryColor),
                           )
-                        : const Icon(Icons.send),
+                        : Icon(Icons.send, color: AppColors.primaryColor),
                   ),
                 ],
               ),
@@ -242,7 +262,7 @@ class _MessageBubble extends StatelessWidget {
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
         decoration: BoxDecoration(
-          color: isMe ? Colors.black87 : Colors.grey.shade100,
+          color: isMe ? AppColors.primaryColor : AppColors.surfaceVariant,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(14),
             topRight: const Radius.circular(14),
@@ -255,14 +275,15 @@ class _MessageBubble extends StatelessWidget {
           children: [
             Text(
               text,
-              style: TextStyle(color: isMe ? Colors.white : Colors.black87),
+              style: AppTypography.bodySmall.copyWith(
+                color: isMe ? AppColors.textDark : AppColors.textPrimary,
+              ),
             ),
             const SizedBox(height: 4),
             Text(
               time,
-              style: TextStyle(
-                fontSize: 10,
-                color: isMe ? Colors.white70 : Colors.grey.shade600,
+              style: AppTypography.captionSmall.copyWith(
+                color: isMe ? AppColors.textDark.withValues(alpha: 0.6) : AppColors.textHint,
               ),
             ),
           ],

@@ -7,6 +7,8 @@ import 'package:latlong2/latlong.dart';
 import '../../models/skill_model.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/user_provider.dart' as userp;
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/validators.dart';
 import '../../widgets/common/image_viewer.dart';
 import '../../widgets/common/map_picker_screen.dart';
@@ -133,7 +135,12 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
     final immediateLeft = profile?.immReqCnt ?? 0;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Post New Job')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
+        title: Text('Post New Job', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+      ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
         child: Form(
@@ -146,21 +153,18 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(16),
-                  gradient: const LinearGradient(
-                    colors: [Color(0xFFE8F8F7), Color(0xFFDDF3F2)],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
+                  color: AppColors.surfaceVariant,
+                  border: Border.all(color: AppColors.border),
                 ),
-                child: const Row(
+                child: Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Icon(Icons.auto_awesome_outlined, color: Color(0xFF0B6E6E)),
-                    SizedBox(width: 10),
+                    const Icon(Icons.auto_awesome_outlined, color: AppColors.primaryColor),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         'Describe your work clearly and providers will send accurate bids. Posting flow stays the same, now with a friendlier UI.',
-                        style: TextStyle(fontSize: 13, height: 1.35),
+                        style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
                       ),
                     ),
                   ],
@@ -169,12 +173,13 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
               const SizedBox(height: 18),
               Text(
                 'Project Details',
-                style: Theme.of(context).textTheme.titleMedium,
+                style: AppTypography.heading4.copyWith(color: AppColors.textPrimary),
               ),
               const SizedBox(height: 10),
               DropdownButtonFormField<int>(
                 initialValue: _selectedSkillId,
                 isExpanded: true,
+                dropdownColor: AppColors.surfaceLight,
                 decoration: const InputDecoration(
                   labelText: 'Skill/Category',
                   prefixIcon: Icon(Icons.category_outlined),
@@ -212,7 +217,7 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
               const SizedBox(height: 18),
               Text(
                 'Budget & Location',
-                style: Theme.of(context).textTheme.titleMedium,
+                style: AppTypography.heading4.copyWith(color: AppColors.textPrimary),
               ),
               const SizedBox(height: 12),
               TextFormField(
@@ -236,6 +241,10 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
               ),
               const SizedBox(height: 10),
               OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryColor,
+                  side: const BorderSide(color: AppColors.border),
+                ),
                 onPressed: _submitting
                     ? null
                     : () async {
@@ -270,50 +279,80 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
               const SizedBox(height: 18),
               Text(
                 'Immediate Service',
-                style: Theme.of(context).textTheme.titleMedium,
+                style: AppTypography.heading4.copyWith(color: AppColors.textPrimary),
               ),
               const SizedBox(height: 6),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Request Immediate Service'),
-                subtitle: Text(
-                  'Nearby providers will be notified instantly and your post will auto-expire. Remaining: $immediateLeft',
+              Container(
+                decoration: BoxDecoration(
+                  color: AppColors.surfaceLight,
+                  borderRadius: BorderRadius.circular(14),
+                  border: Border.all(color: AppColors.border),
                 ),
-                value: _isImmediate,
-                onChanged: (_submitting || immediateLeft <= 0)
-                    ? null
-                    : (v) => setState(() => _isImmediate = v),
+                child: SwitchListTile(
+                  contentPadding: const EdgeInsets.symmetric(horizontal: 14),
+                  activeColor: AppColors.primaryColor,
+                  title: Text(
+                    'Request Immediate Service',
+                    style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary),
+                  ),
+                  subtitle: Text(
+                    'Nearby providers will be notified instantly and your post will auto-expire. Remaining: $immediateLeft',
+                    style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                  ),
+                  value: _isImmediate,
+                  onChanged: (_submitting || immediateLeft <= 0)
+                      ? null
+                      : (v) => setState(() => _isImmediate = v),
+                ),
               ),
               if (immediateLeft <= 0)
-                const Text(
-                  'Immediate request balance exhausted. Post a normal request or wait for reset.',
-                  style: TextStyle(fontSize: 12, color: Colors.redAccent),
+                Padding(
+                  padding: const EdgeInsets.only(top: 6),
+                  child: Text(
+                    'Immediate request balance exhausted. Post a normal request or wait for reset.',
+                    style: AppTypography.captionSmall.copyWith(color: AppColors.error),
+                  ),
                 ),
               if (_isImmediate) ...[
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    const Icon(Icons.timer_outlined, size: 20),
-                    const SizedBox(width: 8),
-                    const Text('Expires in'),
-                    const SizedBox(width: 12),
-                    DropdownButton<int>(
-                      value: _immediateHours,
-                      items: [1, 2, 3, 4, 6]
-                          .map((h) => DropdownMenuItem(
-                                value: h,
-                                child: Text('$h hour${h > 1 ? 's' : ''}'),
-                              ))
-                          .toList(),
-                      onChanged: (v) {
-                        if (v != null) setState(() => _immediateHours = v);
-                      },
-                    ),
-                  ],
+                const SizedBox(height: 10),
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: AppColors.glowOrange,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.accent.withValues(alpha: 0.3)),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.timer_outlined, size: 20, color: AppColors.accent),
+                      const SizedBox(width: 8),
+                      Text('Expires in', style: AppTypography.labelMedium.copyWith(color: AppColors.textPrimary)),
+                      const SizedBox(width: 12),
+                      DropdownButton<int>(
+                        value: _immediateHours,
+                        dropdownColor: AppColors.surfaceLight,
+                        style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary),
+                        underline: Container(height: 1, color: AppColors.border),
+                        items: [1, 2, 3, 4, 6]
+                            .map((h) => DropdownMenuItem(
+                                  value: h,
+                                  child: Text('$h hour${h > 1 ? 's' : ''}'),
+                                ))
+                            .toList(),
+                        onChanged: (v) {
+                          if (v != null) setState(() => _immediateHours = v);
+                        },
+                      ),
+                    ],
+                  ),
                 ),
               ],
-              const SizedBox(height: 12),
+              const SizedBox(height: 14),
               OutlinedButton.icon(
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.primaryColor,
+                  side: const BorderSide(color: AppColors.border),
+                ),
                 onPressed: _submitting ? null : _pickImages,
                 icon: const Icon(Icons.add_photo_alternate_outlined),
                 label: Text('Add Reference Images (${_referenceImages.length}/4)'),
@@ -349,11 +388,11 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                               onTap: () => setState(() => _referenceImages.removeAt(index)),
                               child: Container(
                                 decoration: const BoxDecoration(
-                                  color: Colors.black54,
+                                  color: AppColors.blackOverlay,
                                   shape: BoxShape.circle,
                                 ),
                                 padding: const EdgeInsets.all(2),
-                                child: const Icon(Icons.close, color: Colors.white, size: 14),
+                                child: const Icon(Icons.close, color: AppColors.textPrimary, size: 14),
                               ),
                             ),
                           ),
@@ -363,18 +402,25 @@ class _CreateJobScreenState extends ConsumerState<CreateJobScreen> {
                   ),
                 ),
               ],
-              const SizedBox(height: 20),
+              const SizedBox(height: 24),
               SizedBox(
                 width: double.infinity,
                 child: FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.primaryColor,
+                    foregroundColor: AppColors.textDark,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    disabledBackgroundColor: AppColors.surfaceVariant,
+                    disabledForegroundColor: AppColors.textHint,
+                  ),
                   onPressed: _submitting ? null : _submit,
                   child: _submitting
                       ? const SizedBox(
                           width: 18,
                           height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                          child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textDark),
                         )
-                      : const Text('Post Job'),
+                      : Text('Post Job', style: AppTypography.buttonText.copyWith(color: AppColors.textDark)),
                 ),
               ),
             ],

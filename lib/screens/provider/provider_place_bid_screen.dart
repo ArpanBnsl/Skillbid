@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../models/job/job_model.dart';
 import '../../providers/bid_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../utils/validators.dart';
 
@@ -29,29 +31,72 @@ class _ProviderPlaceBidScreenState extends ConsumerState<ProviderPlaceBidScreen>
     super.dispose();
   }
 
+  InputDecoration _inputDecoration(String label, {String? hint}) {
+    return InputDecoration(
+      labelText: label,
+      hintText: hint,
+      labelStyle: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+      hintStyle: AppTypography.bodySmall.copyWith(color: AppColors.textHint),
+      filled: true,
+      fillColor: AppColors.surfaceVariant,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.border),
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.border),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.borderFocus, width: 2),
+      ),
+      errorBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: AppColors.error),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Place Bid')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: Text('Place Bid', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
-          Card(
-            child: Padding(
-              padding: const EdgeInsets.all(16),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(widget.job.title, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 18)),
-                  const SizedBox(height: 8),
-                  Text('Budget: ${Formatters.formatCurrencyShort(widget.job.budget)}'),
-                  const SizedBox(height: 4),
-                  Text('Location: ${widget.job.location}'),
-                ],
-              ),
+          // Job summary card
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.surfaceVariant,
+              borderRadius: BorderRadius.circular(14),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(widget.job.title, style: AppTypography.bodyLarge.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w700)),
+                const SizedBox(height: 8),
+                Text(
+                  'Budget: ${Formatters.formatCurrencyShort(widget.job.budget)}',
+                  style: AppTypography.labelMedium.copyWith(color: AppColors.primaryColor),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Location: ${widget.job.location}',
+                  style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                ),
+              ],
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 20),
           Form(
             key: _formKey,
             child: Column(
@@ -59,36 +104,60 @@ class _ProviderPlaceBidScreenState extends ConsumerState<ProviderPlaceBidScreen>
                 TextFormField(
                   controller: _amountController,
                   keyboardType: const TextInputType.numberWithOptions(decimal: true),
-                  decoration: const InputDecoration(labelText: 'Your Bid Amount'),
+                  decoration: _inputDecoration('Your Bid Amount'),
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
                   validator: Validators.validateAmount,
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _daysController,
                   keyboardType: TextInputType.number,
-                  decoration: const InputDecoration(labelText: 'Estimated Days'),
+                  decoration: _inputDecoration('Estimated Days'),
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 14),
                 TextFormField(
                   controller: _messageController,
                   minLines: 4,
                   maxLines: 6,
-                  decoration: const InputDecoration(
-                    labelText: 'Proposal Message',
-                    hintText: 'Explain your approach, experience, and timeline.',
+                  decoration: _inputDecoration(
+                    'Proposal Message',
+                    hint: 'Explain your approach, experience, and timeline.',
                   ),
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary),
                 ),
-                const SizedBox(height: 20),
-                FilledButton.icon(
-                  onPressed: _submitting ? null : _submit,
-                  icon: _submitting
-                      ? const SizedBox(
-                          width: 18,
-                          height: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.send_outlined),
-                  label: const Text('Submit Bid'),
+                const SizedBox(height: 24),
+                SizedBox(
+                  width: double.infinity,
+                  height: 50,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: _submitting ? null : AppColors.primaryGradient,
+                      color: _submitting ? AppColors.surfaceVariant : null,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: MaterialButton(
+                      onPressed: _submitting ? null : _submit,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      child: _submitting
+                          ? SizedBox(
+                              width: 22,
+                              height: 22,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: AppColors.primaryColor,
+                              ),
+                            )
+                          : Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Icon(Icons.send_outlined, color: AppColors.textDark),
+                                const SizedBox(width: 8),
+                                Text('Submit Bid', style: AppTypography.buttonText.copyWith(color: AppColors.textDark)),
+                              ],
+                            ),
+                    ),
+                  ),
                 ),
               ],
             ),

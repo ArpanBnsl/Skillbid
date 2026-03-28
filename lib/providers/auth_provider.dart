@@ -3,10 +3,12 @@ import 'bid_provider.dart';
 import 'chat_provider.dart';
 import 'contract_provider.dart';
 import 'job_provider.dart';
+import 'notification_provider.dart';
 import 'portfolio_provider.dart';
 import 'user_provider.dart' as userp;
 import '../repositories/auth_repository.dart';
 import '../services/auth_service.dart';
+import '../services/notification_service.dart';
 import '../config/supabase_config.dart';
 
 final authServiceProvider = Provider((ref) => AuthService());
@@ -70,10 +72,18 @@ final signInProvider = FutureProvider.family<void, ({String email, String passwo
   ref.invalidate(userChatsProvider);
   ref.invalidate(userChatOverviewsProvider);
   ref.invalidate(providerPortfolioProvider);
+  ref.invalidate(notificationInitProvider);
 });
 
 /// Sign out
 final signOutProvider = FutureProvider<void>((ref) async {
+  // Remove FCM token before signing out so the device stops receiving
+  // notifications for this account.
+  final userId = ref.read(currentUserIdProvider);
+  if (userId != null) {
+    await NotificationService().removeToken(userId: userId);
+  }
+
   final repo = ref.watch(authRepositoryProvider);
   await repo.signOut();
 
@@ -93,6 +103,7 @@ final signOutProvider = FutureProvider<void>((ref) async {
   ref.invalidate(userChatsProvider);
   ref.invalidate(userChatOverviewsProvider);
   ref.invalidate(providerPortfolioProvider);
+  ref.invalidate(notificationInitProvider);
 });
 
 /// Sign up

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../theme/app_colors.dart';
 
 class CustomTextField extends StatelessWidget {
   final String labelText;
@@ -44,11 +45,36 @@ class CustomTextField extends StatelessWidget {
       validator: validator,
       onChanged: onChanged,
       textCapitalization: textCapitalization,
+      style: const TextStyle(color: AppColors.textPrimary),
+      cursorColor: AppColors.primaryColor,
       decoration: InputDecoration(
         labelText: labelText,
         hintText: hintText,
         prefixIcon: prefixIcon,
         suffixIcon: suffixIcon,
+        labelStyle: const TextStyle(color: AppColors.textSecondary),
+        hintStyle: const TextStyle(color: AppColors.textHint),
+        prefixIconColor: AppColors.textHint,
+        suffixIconColor: AppColors.textHint,
+        filled: true,
+        fillColor: AppColors.surfaceLight,
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.border),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide:
+              const BorderSide(color: AppColors.borderFocus, width: 1.5),
+        ),
+        errorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.error),
+        ),
+        focusedErrorBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(12),
+          borderSide: const BorderSide(color: AppColors.error, width: 1.5),
+        ),
       ),
     );
   }

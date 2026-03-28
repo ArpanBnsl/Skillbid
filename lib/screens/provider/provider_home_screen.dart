@@ -6,10 +6,14 @@ import '../../providers/auth_provider.dart';
 import '../../providers/bid_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../providers/user_provider.dart' as userp;
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/empty_state_widget.dart';
 import '../../widgets/common/loading_widget.dart';
+import 'provider_bids_screen.dart';
 import 'provider_job_detail_screen.dart';
+import 'provider_jobs_screen.dart';
 
 class ProviderHomeScreen extends ConsumerWidget {
   const ProviderHomeScreen({super.key});
@@ -22,8 +26,16 @@ class ProviderHomeScreen extends ConsumerWidget {
     final userId = ref.watch(currentUserIdProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Provider Dashboard')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: Text('Provider Dashboard', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: RefreshIndicator(
+        color: AppColors.primaryColor,
+        backgroundColor: AppColors.surfaceLight,
         onRefresh: () async {
           ref.invalidate(providerBidsProvider);
           ref.invalidate(availableJobsProvider);
@@ -43,14 +55,37 @@ class ProviderHomeScreen extends ConsumerWidget {
                 firstName: profile == null ? 'there' : profile.fullName.split(' ').first,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 12),
+            // Quick action chips
+            Row(
+              children: [
+                _QuickActionChip(
+                  label: 'Browse Jobs',
+                  icon: Icons.search,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProviderJobsScreen()),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                _QuickActionChip(
+                  label: 'My Bids',
+                  icon: Icons.gavel,
+                  onTap: () => Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (_) => const ProviderBidsScreen()),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 18),
             _DashboardStats(
               bidsAsync: bidsAsync,
               jobsAsync: jobsAsync,
               currentUserId: userId,
             ),
             const SizedBox(height: 18),
-            // ── Immediate Jobs Section ──
+            // Immediate Jobs Section
             jobsAsync.when(
               loading: () => const SizedBox.shrink(),
               error: (_, __) => const SizedBox.shrink(),
@@ -71,10 +106,12 @@ class ProviderHomeScreen extends ConsumerWidget {
                   children: [
                     Row(
                       children: [
-                        Icon(Icons.bolt, color: Colors.orange.shade800, size: 20),
+                        Icon(Icons.bolt, color: AppColors.accent, size: 20),
                         const SizedBox(width: 6),
-                        Text('Urgent — Immediate Service',
-                            style: Theme.of(context).textTheme.titleMedium),
+                        Text(
+                          'Urgent — Immediate Service',
+                          style: AppTypography.labelLarge.copyWith(color: AppColors.accent),
+                        ),
                       ],
                     ),
                     const SizedBox(height: 8),
@@ -86,9 +123,13 @@ class ProviderHomeScreen extends ConsumerWidget {
                       final timeLabel = expired
                           ? 'Expired'
                           : '${remaining.inHours}h ${remaining.inMinutes.remainder(60)}m left';
-                      return Card(
+                      return Container(
                         margin: const EdgeInsets.only(bottom: 8),
-                        color: Colors.orange.shade50,
+                        decoration: BoxDecoration(
+                          color: AppColors.warningLight,
+                          borderRadius: BorderRadius.circular(14),
+                          border: Border.all(color: AppColors.warning.withValues(alpha: 0.3)),
+                        ),
                         child: ListTile(
                           onTap: () => Navigator.push(
                             context,
@@ -96,12 +137,15 @@ class ProviderHomeScreen extends ConsumerWidget {
                               builder: (_) => ProviderJobDetailScreen(job: job),
                             ),
                           ),
-                          leading: Icon(Icons.bolt, color: Colors.orange.shade800),
-                          title: Text(job.title),
-                          subtitle: Text('${job.location} • $timeLabel'),
+                          leading: Icon(Icons.bolt, color: AppColors.warning),
+                          title: Text(job.title, style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                          subtitle: Text(
+                            '${job.location} • $timeLabel',
+                            style: AppTypography.caption.copyWith(color: AppColors.warning),
+                          ),
                           trailing: Text(
                             Formatters.formatCurrencyShort(job.budget),
-                            style: const TextStyle(fontWeight: FontWeight.w700),
+                            style: AppTypography.labelLarge.copyWith(color: AppColors.warning),
                           ),
                         ),
                       );
@@ -111,13 +155,44 @@ class ProviderHomeScreen extends ConsumerWidget {
                 );
               },
             ),
-            Text('Fresh Opportunities', style: Theme.of(context).textTheme.titleMedium),
+            Text('Fresh Opportunities', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
             const SizedBox(height: 10),
             _FreshOpportunities(
               jobsAsync: jobsAsync,
               bidsAsync: bidsAsync,
               currentUserId: userId,
             ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _QuickActionChip extends StatelessWidget {
+  final String label;
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _QuickActionChip({required this.label, required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: AppColors.primaryColor.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.primaryColor.withValues(alpha: 0.3)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: 16, color: AppColors.primaryColor),
+            const SizedBox(width: 6),
+            Text(label, style: AppTypography.labelMedium.copyWith(color: AppColors.primaryColor)),
           ],
         ),
       ),
@@ -140,7 +215,7 @@ class _FreshOpportunities extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     return jobsAsync.when(
               loading: () => const LoadingWidget(message: 'Loading open jobs...'),
-              error: (e, _) => Text('Failed to load jobs: $e'),
+              error: (e, _) => Text('Failed to load jobs: $e', style: TextStyle(color: AppColors.error)),
               data: (jobs) {
                 final myBids = (bidsAsync.valueOrNull ?? const []);
                 final bidJobIds = myBids.map((bid) => bid.jobId).toSet();
@@ -164,8 +239,13 @@ class _FreshOpportunities extends ConsumerWidget {
 
                 return Column(
                   children: freshJobs.map((job) {
-                    return Card(
+                    return Container(
                       margin: const EdgeInsets.only(bottom: 10),
+                      decoration: BoxDecoration(
+                        color: AppColors.surfaceLight,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: AppColors.border),
+                      ),
                       child: ListTile(
                         onTap: () {
                           Navigator.push(
@@ -175,12 +255,15 @@ class _FreshOpportunities extends ConsumerWidget {
                             ),
                           );
                         },
-                        leading: const Icon(Icons.work_outline),
-                        title: Text(job.title),
-                        subtitle: Text('${job.location} • ${Formatters.formatTimeAgo(job.createdAt)}'),
+                        leading: Icon(Icons.work_outline, color: AppColors.primaryColor),
+                        title: Text(job.title, style: AppTypography.bodyMedium.copyWith(color: AppColors.textPrimary, fontWeight: FontWeight.w600)),
+                        subtitle: Text(
+                          '${job.location} • ${Formatters.formatTimeAgo(job.createdAt)}',
+                          style: AppTypography.caption.copyWith(color: AppColors.textSecondary),
+                        ),
                         trailing: Text(
                           Formatters.formatCurrencyShort(job.budget),
-                          style: const TextStyle(fontWeight: FontWeight.w700),
+                          style: AppTypography.labelLarge.copyWith(color: AppColors.primaryColor),
                         ),
                       ),
                     );
@@ -199,14 +282,10 @@ class _ProviderHeroCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
-        gradient: const LinearGradient(
-          colors: [Color(0xFF0B6E6E), Color(0xFF1F9E9A)],
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-        ),
+        gradient: AppColors.purpleGradient,
       ),
       child: Stack(
         children: [
@@ -218,7 +297,7 @@ class _ProviderHeroCard extends StatelessWidget {
               height: 90,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.12),
+                color: AppColors.whiteOverlay,
               ),
             ),
           ),
@@ -230,7 +309,7 @@ class _ProviderHeroCard extends StatelessWidget {
               height: 120,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withValues(alpha: 0.08),
+                color: AppColors.whiteOverlay,
               ),
             ),
           ),
@@ -239,19 +318,12 @@ class _ProviderHeroCard extends StatelessWidget {
             children: [
               Text(
                 'Welcome, $firstName',
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
+                style: AppTypography.heading3.copyWith(color: AppColors.textPrimary),
               ),
               const SizedBox(height: 8),
-              const Text(
+              Text(
                 'Track your bidding activity and discover matching opportunities from clients.',
-                style: TextStyle(
-                  color: Colors.white,
-                  height: 1.35,
-                ),
+                style: AppTypography.bodySmall.copyWith(color: AppColors.textPrimary.withValues(alpha: 0.85)),
               ),
             ],
           ),
@@ -290,15 +362,30 @@ class _DashboardStats extends StatelessWidget {
         return Row(
           children: [
             Expanded(
-              child: _DashboardTile(label: 'Fresh Opportunities', value: '$freshOpportunities', icon: Icons.travel_explore_outlined),
+              child: _DashboardTile(
+                label: 'Fresh Opportunities',
+                value: '$freshOpportunities',
+                icon: Icons.travel_explore_outlined,
+                iconColor: AppColors.primaryColor,
+              ),
             ),
             SizedBox(width: gap),
             Expanded(
-              child: _DashboardTile(label: 'Pending Bids', value: '$pendingBids', icon: Icons.hourglass_bottom_outlined),
+              child: _DashboardTile(
+                label: 'Pending Bids',
+                value: '$pendingBids',
+                icon: Icons.hourglass_bottom_outlined,
+                iconColor: AppColors.secondaryColor,
+              ),
             ),
             SizedBox(width: gap),
             Expanded(
-              child: _DashboardTile(label: 'Accepted', value: '$acceptedBids', icon: Icons.verified_outlined),
+              child: _DashboardTile(
+                label: 'Accepted',
+                value: '$acceptedBids',
+                icon: Icons.verified_outlined,
+                iconColor: AppColors.success,
+              ),
             ),
           ],
         );
@@ -311,8 +398,14 @@ class _DashboardTile extends StatelessWidget {
   final String label;
   final String value;
   final IconData icon;
+  final Color iconColor;
 
-  const _DashboardTile({required this.label, required this.value, required this.icon});
+  const _DashboardTile({
+    required this.label,
+    required this.value,
+    required this.icon,
+    required this.iconColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -321,26 +414,29 @@ class _DashboardTile extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 10),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: AppColors.surfaceLight,
           borderRadius: BorderRadius.circular(14),
-          border: Border.all(color: const Color(0xFFE6EFEF)),
+          border: Border.all(color: AppColors.border),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Icon(icon, size: 17, color: const Color(0xFF0B6E6E)),
+            Icon(icon, size: 17, color: iconColor),
             const SizedBox(height: 6),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment: Alignment.centerLeft,
-              child: Text(value, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              child: Text(
+                value,
+                style: AppTypography.heading4.copyWith(color: AppColors.textPrimary),
+              ),
             ),
             const Spacer(),
             Text(
               label,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: const TextStyle(fontSize: 11, color: Colors.black54),
+              style: AppTypography.captionSmall.copyWith(color: AppColors.textSecondary),
             ),
           ],
         ),

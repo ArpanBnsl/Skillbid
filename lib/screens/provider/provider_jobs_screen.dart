@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../providers/job_provider.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/formatters.dart';
 import '../../widgets/common/empty_state_widget.dart';
 import '../../widgets/common/loading_widget.dart';
@@ -14,8 +16,16 @@ class ProviderJobsScreen extends ConsumerWidget {
     final jobsAsync = ref.watch(availableJobsProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Browse Jobs')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        title: Text('Browse Jobs', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        iconTheme: const IconThemeData(color: AppColors.textPrimary),
+      ),
       body: RefreshIndicator(
+        color: AppColors.primaryColor,
+        backgroundColor: AppColors.surfaceLight,
         onRefresh: () async {
           ref.invalidate(availableJobsProvider);
           await ref.read(availableJobsProvider.future);
@@ -28,7 +38,7 @@ class ProviderJobsScreen extends ConsumerWidget {
               SizedBox(
                 height: 500,
                 child: Center(
-                  child: Text('Failed to load jobs:\n$e', textAlign: TextAlign.center),
+                  child: Text('Failed to load jobs:\n$e', textAlign: TextAlign.center, style: TextStyle(color: AppColors.error)),
                 ),
               ),
             ],
@@ -71,12 +81,8 @@ class ProviderJobsScreen extends ConsumerWidget {
                     padding: const EdgeInsets.all(18),
                     decoration: BoxDecoration(
                       borderRadius: BorderRadius.circular(20),
-                      gradient: const LinearGradient(
-                        colors: [Color(0xFFF7FBFB), Color(0xFFFFFFFF)],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                      border: Border.all(color: const Color(0xFFD9ECEC)),
+                      color: AppColors.surfaceLight,
+                      border: Border.all(color: AppColors.border),
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -86,8 +92,8 @@ class ProviderJobsScreen extends ConsumerWidget {
                             Expanded(
                               child: Text(
                                 job.title,
-                                style: const TextStyle(
-                                  fontSize: 17,
+                                style: AppTypography.bodyLarge.copyWith(
+                                  color: AppColors.textPrimary,
                                   fontWeight: FontWeight.w700,
                                 ),
                               ),
@@ -95,15 +101,12 @@ class ProviderJobsScreen extends ConsumerWidget {
                             Container(
                               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                               decoration: BoxDecoration(
-                                color: const Color(0xFFD7F3F1),
+                                color: AppColors.primaryColor.withValues(alpha: 0.15),
                                 borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
                                 Formatters.formatCurrencyShort(job.budget),
-                                style: const TextStyle(
-                                  color: Color(0xFF0B6E6E),
-                                  fontWeight: FontWeight.w700,
-                                ),
+                                style: AppTypography.labelMedium.copyWith(color: AppColors.primaryColor),
                               ),
                             ),
                           ],
@@ -113,7 +116,7 @@ class ProviderJobsScreen extends ConsumerWidget {
                           job.description,
                           maxLines: 3,
                           overflow: TextOverflow.ellipsis,
-                          style: TextStyle(color: Colors.grey.shade700, height: 1.35),
+                          style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary, height: 1.35),
                         ),
                         const SizedBox(height: 14),
                         Wrap(
@@ -138,13 +141,10 @@ class ProviderJobsScreen extends ConsumerWidget {
                             const Spacer(),
                             Text(
                               'View details',
-                              style: TextStyle(
-                                color: Colors.teal.shade700,
-                                fontWeight: FontWeight.w700,
-                              ),
+                              style: AppTypography.labelMedium.copyWith(color: AppColors.primaryColor),
                             ),
                             const SizedBox(width: 6),
-                            const Icon(Icons.arrow_forward, size: 18),
+                            Icon(Icons.arrow_forward, size: 18, color: AppColors.primaryColor),
                           ],
                         ),
                       ],
@@ -171,15 +171,15 @@ class _MetaChip extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFFF3F7F7),
+        color: AppColors.surfaceVariant,
         borderRadius: BorderRadius.circular(999),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.teal.shade700),
+          Icon(icon, size: 16, color: AppColors.primaryColor),
           const SizedBox(width: 6),
-          Text(label),
+          Text(label, style: AppTypography.caption.copyWith(color: AppColors.textSecondary)),
         ],
       ),
     );

@@ -1,23 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../providers/job_provider.dart';
+import '../../theme/app_colors.dart';
 import '../common/chat_screen.dart';
 import '../common/chat_detail_screen.dart';
 import 'provider_home_screen.dart';
+import 'provider_job_detail_screen.dart';
 import 'provider_projects_screen.dart';
 import 'provider_profile_screen.dart';
 
-class ProviderShell extends StatefulWidget {
+class ProviderShell extends ConsumerStatefulWidget {
   final int initialIndex;
   final String? initialChatId;
   final String? initialChatTitle;
+  final String? initialJobId;
 
-  const ProviderShell({super.key, this.initialIndex = 0, this.initialChatId, this.initialChatTitle});
+  const ProviderShell({
+    super.key,
+    this.initialIndex = 0,
+    this.initialChatId,
+    this.initialChatTitle,
+    this.initialJobId,
+  });
 
   @override
-  State<ProviderShell> createState() => _ProviderShellState();
+  ConsumerState<ProviderShell> createState() => _ProviderShellState();
 }
 
-class _ProviderShellState extends State<ProviderShell> {
+class _ProviderShellState extends ConsumerState<ProviderShell> {
   late int _currentIndex;
 
   @override
@@ -36,6 +47,20 @@ class _ProviderShellState extends State<ProviderShell> {
             ),
           ),
         );
+      });
+    }
+
+    if (widget.initialJobId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final job = await ref.read(jobProvider(widget.initialJobId!).future);
+        if (job != null && mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ProviderJobDetailScreen(job: job),
+            ),
+          );
+        }
       });
     }
   }
@@ -60,6 +85,7 @@ class _ProviderShellState extends State<ProviderShell> {
         Navigator.of(context).pop();
       },
       child: Scaffold(
+        backgroundColor: AppColors.surface,
         body: IndexedStack(
           index: _currentIndex,
           children: screens,
@@ -67,18 +93,18 @@ class _ProviderShellState extends State<ProviderShell> {
         floatingActionButton: FloatingActionButton.small(
           heroTag: 'switchRole',
           onPressed: () => context.go('/role-selection'),
-          backgroundColor: Colors.grey.shade200,
-          elevation: 1,
+          backgroundColor: AppColors.secondaryColor,
+          elevation: 2,
           tooltip: 'Switch to Client',
-          child: const Icon(Icons.swap_horiz, color: Colors.black87, size: 20),
+          child: const Icon(Icons.swap_horiz, color: AppColors.textPrimary, size: 20),
         ),
         bottomNavigationBar: BottomNavigationBar(
           currentIndex: _currentIndex,
           onTap: (index) => setState(() => _currentIndex = index),
           type: BottomNavigationBarType.fixed,
-          backgroundColor: Colors.white,
-          selectedItemColor: Colors.teal,
-          unselectedItemColor: Colors.grey,
+          backgroundColor: AppColors.surfaceLight,
+          selectedItemColor: AppColors.primaryColor,
+          unselectedItemColor: AppColors.textHint,
           items: const [
             BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
             BottomNavigationBarItem(icon: Icon(Icons.work_outline), label: 'Projects'),

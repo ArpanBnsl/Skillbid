@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/validators.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_text_field.dart';
@@ -49,7 +50,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Sign in failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -63,7 +64,7 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       body: SafeArea(
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(24),
@@ -73,25 +74,36 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const SizedBox(height: 60),
-                Icon(
-                  Icons.handshake_outlined,
-                  size: 64,
-                  color: AppColors.primaryColor,
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    boxShadow: [
+                      BoxShadow(
+                        color: AppColors.glowTeal,
+                        blurRadius: 30,
+                        spreadRadius: 5,
+                      ),
+                    ],
+                  ),
+                  child: const Icon(
+                    Icons.handshake_outlined,
+                    size: 64,
+                    color: AppColors.primaryColor,
+                  ),
                 ),
-                const SizedBox(height: 20),
-                const Text(
+                const SizedBox(height: 24),
+                Text(
                   'Welcome Back',
-                  style: TextStyle(
-                    fontSize: 28,
-                    fontWeight: FontWeight.bold,
+                  style: AppTypography.heading2.copyWith(
+                    color: AppColors.textPrimary,
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Sign in to continue',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 40),
@@ -101,7 +113,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   validator: Validators.validateEmail,
-                  prefixIcon: const Icon(Icons.email_outlined),
+                  prefixIcon:
+                      const Icon(Icons.email_outlined, color: AppColors.textHint),
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
@@ -109,15 +122,20 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                   controller: _passwordController,
                   obscureText: !_showPassword,
                   validator: Validators.validatePassword,
-                  prefixIcon: const Icon(Icons.lock_outlined),
+                  prefixIcon:
+                      const Icon(Icons.lock_outlined, color: AppColors.textHint),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _showPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      _showPassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: AppColors.textHint,
                     ),
-                    onPressed: () => setState(() => _showPassword = !_showPassword),
+                    onPressed: () =>
+                        setState(() => _showPassword = !_showPassword),
                   ),
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 28),
                 SizedBox(
                   width: double.infinity,
                   child: CustomButton(
@@ -126,19 +144,21 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
                     isLoading: _isLoading,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       "Don't have an account? ",
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     GestureDetector(
                       onTap: _isLoading ? null : () => context.go('/sign-up'),
-                      child: const Text(
+                      child: Text(
                         'Sign Up',
-                        style: TextStyle(
+                        style: AppTypography.bodySmall.copyWith(
                           color: AppColors.primaryColor,
                           fontWeight: FontWeight.w600,
                         ),

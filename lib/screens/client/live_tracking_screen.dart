@@ -7,6 +7,8 @@ import '../../models/contract_model.dart';
 import '../../repositories/contract_repository.dart';
 import '../../services/route_service.dart';
 import '../../services/tracking_service.dart';
+import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 
 /// Full-screen map that shows the provider's live location, the job site,
 /// the route polyline, and an ETA info card.
@@ -115,7 +117,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     final centre = _providerLatLng ?? widget.jobLocation;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Live Tracking')),
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
+        title: Text('Live Tracking', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+      ),
       body: Stack(
         children: [
           FlutterMap(
@@ -126,7 +133,7 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
             ),
             children: [
               TileLayer(
-                urlTemplate: 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png',
+                urlTemplate: 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',
                 subdomains: const ['a', 'b', 'c', 'd'],
                 userAgentPackageName: 'com.skillbid.app',
               ),
@@ -137,26 +144,26 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
                     Polyline(
                       points: _routeData!.polylinePoints,
                       strokeWidth: 4,
-                      color: Colors.blueAccent,
+                      color: AppColors.primaryColor,
                     ),
                   ],
                 ),
               MarkerLayer(
                 markers: [
-                  // Job site marker (red)
+                  // Job site marker (accent orange)
                   Marker(
                     point: widget.jobLocation,
                     width: 40,
                     height: 40,
-                    child: const Icon(Icons.location_on, color: Colors.red, size: 36),
+                    child: const Icon(Icons.location_on, color: AppColors.accent, size: 36),
                   ),
-                  // Provider marker (blue)
+                  // Provider marker (primary teal)
                   if (_providerLatLng != null)
                     Marker(
                       point: _providerLatLng!,
                       width: 40,
                       height: 40,
-                      child: const Icon(Icons.directions_walk, color: Colors.blue, size: 32),
+                      child: const Icon(Icons.directions_walk, color: AppColors.primaryColor, size: 32),
                     ),
                 ],
               ),
@@ -168,27 +175,32 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
             left: 16,
             right: 16,
             bottom: 24,
-            child: Card(
-              child: Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-                child: _routeData != null
-                    ? Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
-                        children: [
-                          _metric(Icons.route, _routeData!.distanceText),
-                          _metric(Icons.access_time, _routeData!.durationText),
-                        ],
-                      )
-                    : _providerLatLng == null
-                        ? const Text(
-                            'Waiting for provider location…',
-                            textAlign: TextAlign.center,
-                          )
-                        : const Text(
-                            'Loading route…',
-                            textAlign: TextAlign.center,
-                          ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: AppColors.surfaceLight,
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: AppColors.border),
               ),
+              child: _routeData != null
+                  ? Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _metric(Icons.route, _routeData!.distanceText),
+                        _metric(Icons.access_time, _routeData!.durationText),
+                      ],
+                    )
+                  : _providerLatLng == null
+                      ? Text(
+                          'Waiting for provider location...',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                        )
+                      : Text(
+                          'Loading route...',
+                          textAlign: TextAlign.center,
+                          style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                        ),
             ),
           ),
         ],
@@ -200,9 +212,12 @@ class _LiveTrackingScreenState extends State<LiveTrackingScreen> {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(icon, size: 20, color: Colors.teal),
+        Icon(icon, size: 20, color: AppColors.primaryColor),
         const SizedBox(width: 6),
-        Text(text, style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+        Text(
+          text,
+          style: AppTypography.heading4.copyWith(color: AppColors.textPrimary),
+        ),
       ],
     );
   }

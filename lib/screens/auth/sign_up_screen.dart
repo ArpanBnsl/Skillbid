@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../theme/app_colors.dart';
+import '../../theme/app_typography.dart';
 import '../../utils/validators.dart';
 import '../../widgets/common/custom_button.dart';
 import '../../widgets/common/custom_text_field.dart';
@@ -59,7 +60,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Sign up successful. Please sign in.')),
+          const SnackBar(
+            content: Text('Sign up successful. Please sign in.'),
+            backgroundColor: AppColors.success,
+          ),
         );
         context.go('/sign-in');
       }
@@ -68,7 +72,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Sign up failed: ${e.toString()}'),
-            backgroundColor: Colors.red,
+            backgroundColor: AppColors.error,
           ),
         );
       }
@@ -82,10 +86,13 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: AppColors.surface,
       appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        scrolledUnderElevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
+          icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary),
           onPressed: _isLoading
               ? null
               : () {
@@ -96,7 +103,10 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   }
                 },
         ),
-        title: const Text('Create Account'),
+        title: Text(
+          'Create Account',
+          style: AppTypography.heading4.copyWith(color: AppColors.textPrimary),
+        ),
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -108,14 +118,15 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               children: [
                 Text(
                   'Join SkillBid',
-                  style: Theme.of(context).textTheme.headlineSmall,
+                  style: AppTypography.heading3.copyWith(
+                    color: AppColors.textPrimary,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 Text(
                   'Create your account to get started',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
+                  style: AppTypography.bodySmall.copyWith(
+                    color: AppColors.textSecondary,
                   ),
                 ),
                 const SizedBox(height: 32),
@@ -123,7 +134,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   labelText: 'Full Name',
                   controller: _nameController,
                   validator: Validators.validateName,
-                  prefixIcon: const Icon(Icons.person_outlined),
+                  prefixIcon: const Icon(Icons.person_outlined,
+                      color: AppColors.textHint),
                   textCapitalization: TextCapitalization.words,
                 ),
                 const SizedBox(height: 16),
@@ -133,7 +145,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   validator: Validators.validateEmail,
-                  prefixIcon: const Icon(Icons.email_outlined),
+                  prefixIcon: const Icon(Icons.email_outlined,
+                      color: AppColors.textHint),
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
@@ -141,7 +154,8 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   controller: _phoneController,
                   keyboardType: TextInputType.phone,
                   validator: Validators.validatePhone,
-                  prefixIcon: const Icon(Icons.phone_outlined),
+                  prefixIcon: const Icon(Icons.phone_outlined,
+                      color: AppColors.textHint),
                 ),
                 const SizedBox(height: 16),
                 CustomTextField(
@@ -149,12 +163,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   controller: _passwordController,
                   obscureText: !_showPassword,
                   validator: Validators.validatePassword,
-                  prefixIcon: const Icon(Icons.lock_outlined),
+                  prefixIcon: const Icon(Icons.lock_outlined,
+                      color: AppColors.textHint),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _showPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      _showPassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: AppColors.textHint,
                     ),
-                    onPressed: () => setState(() => _showPassword = !_showPassword),
+                    onPressed: () =>
+                        setState(() => _showPassword = !_showPassword),
                   ),
                 ),
                 const SizedBox(height: 16),
@@ -163,12 +182,17 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                   controller: _confirmPasswordController,
                   obscureText: !_showConfirmPassword,
                   validator: _validateConfirmPassword,
-                  prefixIcon: const Icon(Icons.lock_outlined),
+                  prefixIcon: const Icon(Icons.lock_outlined,
+                      color: AppColors.textHint),
                   suffixIcon: IconButton(
                     icon: Icon(
-                      _showConfirmPassword ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                      _showConfirmPassword
+                          ? Icons.visibility_outlined
+                          : Icons.visibility_off_outlined,
+                      color: AppColors.textHint,
                     ),
-                    onPressed: () => setState(() => _showConfirmPassword = !_showConfirmPassword),
+                    onPressed: () => setState(
+                        () => _showConfirmPassword = !_showConfirmPassword),
                   ),
                 ),
                 const SizedBox(height: 28),
@@ -180,19 +204,21 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
                     isLoading: _isLoading,
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 20),
                 Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
                     Text(
                       'Already have an account? ',
-                      style: TextStyle(color: Colors.grey.shade600),
+                      style: AppTypography.bodySmall.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                     GestureDetector(
                       onTap: _isLoading ? null : () => context.go('/sign-in'),
-                      child: const Text(
+                      child: Text(
                         'Sign In',
-                        style: TextStyle(
+                        style: AppTypography.bodySmall.copyWith(
                           color: AppColors.primaryColor,
                           fontWeight: FontWeight.w600,
                         ),
