@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import '../../providers/contract_provider.dart';
 import '../../providers/job_provider.dart';
 import '../../theme/app_colors.dart';
 import '../common/chat_screen.dart';
 import '../common/chat_detail_screen.dart';
+import 'provider_contract_detail_screen.dart';
 import 'provider_home_screen.dart';
 import 'provider_job_detail_screen.dart';
 import 'provider_projects_screen.dart';
@@ -15,6 +17,7 @@ class ProviderShell extends ConsumerStatefulWidget {
   final String? initialChatId;
   final String? initialChatTitle;
   final String? initialJobId;
+  final String? initialContractId;
 
   const ProviderShell({
     super.key,
@@ -22,6 +25,7 @@ class ProviderShell extends ConsumerStatefulWidget {
     this.initialChatId,
     this.initialChatTitle,
     this.initialJobId,
+    this.initialContractId,
   });
 
   @override
@@ -58,6 +62,20 @@ class _ProviderShellState extends ConsumerState<ProviderShell> {
           Navigator.of(context).push(
             MaterialPageRoute(
               builder: (_) => ProviderJobDetailScreen(job: job),
+            ),
+          );
+        }
+      });
+    }
+
+    if (widget.initialContractId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) async {
+        if (!mounted) return;
+        final contract = await ref.read(contractProvider(widget.initialContractId!).future);
+        if (contract != null && mounted) {
+          Navigator.of(context).push(
+            MaterialPageRoute(
+              builder: (_) => ProviderContractDetailScreen(contract: contract),
             ),
           );
         }

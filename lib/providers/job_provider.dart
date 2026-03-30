@@ -21,12 +21,15 @@ final skillProvider = FutureProvider.family<SkillModel?, int>((ref, skillId) asy
   return repo.getSkillById(skillId);
 });
 
-/// Get available jobs (open) – excludes immediate jobs that have expired
+/// Get available jobs (open) – excludes immediate jobs that have expired and jobs posted by the current user
 final availableJobsProvider = FutureProvider<List<JobModel>>((ref) async {
   final repo = ref.watch(jobRepositoryProvider);
+  final currentUserId = ref.watch(currentUserIdProvider);
   // Also clean up expired immediate jobs on the fly
   await repo.cancelExpiredImmediateJobs();
-  return repo.getAvailableJobs();
+  final jobs = await repo.getAvailableJobs();
+  if (currentUserId == null) return jobs;
+  return jobs.where((job) => job.clientId != currentUserId).toList();
 });
 
 /// Get client's jobs

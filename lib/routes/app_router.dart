@@ -49,6 +49,7 @@ class AppRouter {
             initialChatId: qp['chatId'],
             initialChatTitle: qp['chatTitle'],
             initialJobId: qp['jobId'],
+            initialContractId: qp['contractId'],
           );
         },
       ),
@@ -61,6 +62,7 @@ class AppRouter {
             initialChatId: qp['chatId'],
             initialChatTitle: qp['chatTitle'],
             initialJobId: qp['jobId'],
+            initialContractId: qp['contractId'],
           );
         },
       ),

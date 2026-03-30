@@ -43,7 +43,11 @@ class ProviderContractsScreen extends ConsumerWidget {
             ],
           ),
           data: (contracts) {
-            if (contracts.isEmpty) {
+            final activeContracts = contracts
+                .where((c) =>
+                    c.status != 'completed' && c.status != 'terminated')
+                .toList();
+            if (activeContracts.isEmpty) {
               return ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 children: const [
@@ -61,10 +65,10 @@ class ProviderContractsScreen extends ConsumerWidget {
             return ListView.separated(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.all(16),
-              itemCount: contracts.length,
+              itemCount: activeContracts.length,
               separatorBuilder: (_, __) => const SizedBox(height: 12),
               itemBuilder: (context, index) {
-                final contract = contracts[index];
+                final contract = activeContracts[index];
                 final jobAsync = ref.watch(jobProvider(contract.jobId));
                 final title = jobAsync.valueOrNull?.title ?? 'Project ${contract.jobId.substring(0, 8)}';
 

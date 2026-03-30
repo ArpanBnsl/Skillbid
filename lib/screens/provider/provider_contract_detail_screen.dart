@@ -365,8 +365,9 @@ class _ProviderContractDetailScreenState extends ConsumerState<ProviderContractD
       await ref.read(submitWorkProvider(contractId).future);
       ref.invalidate(contractProvider(contractId));
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Work submitted. The client can now approve it.')),
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const _WorkSubmittedScreen()),
       );
     } catch (e) {
       if (!mounted) return;
@@ -560,6 +561,74 @@ class _ContractStatusPill extends StatelessWidget {
       child: Text(
         label,
         style: AppTypography.labelSmall.copyWith(color: foreground),
+      ),
+    );
+  }
+}
+
+class _WorkSubmittedScreen extends StatelessWidget {
+  const _WorkSubmittedScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.successLight,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.check_rounded, size: 44, color: AppColors.success),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Work Submitted!',
+                style: AppTypography.heading3.copyWith(color: AppColors.textPrimary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Your work has been submitted for client approval. You\'ll be notified once the client reviews it.',
+                style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: MaterialButton(
+                    onPressed: () {
+                      Navigator.of(context).pushAndRemoveUntil(
+                        MaterialPageRoute(
+                          builder: (_) => const ProviderShell(),
+                        ),
+                        (route) => false,
+                      );
+                    },
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    child: Text(
+                      'Go to Home',
+                      style: AppTypography.buttonText.copyWith(color: AppColors.textDark),
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

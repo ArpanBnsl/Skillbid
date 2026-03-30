@@ -161,6 +161,22 @@ class NotificationService {
         final role = data['role'] as String? ?? 'client';
         AppRouter.router.go('/$role?chatId=$targetId');
         break;
+      case 'bid_accepted':
+        // Provider taps → open the new contract
+        AppRouter.router.go('/provider?contractId=$targetId');
+        break;
+      case 'contract_terminated':
+        // Provider taps → go to provider home
+        AppRouter.router.go('/provider');
+        break;
+      case 'work_submitted':
+        // Client taps → open the contract detail
+        AppRouter.router.go('/client?contractId=$targetId');
+        break;
+      case 'work_approved':
+        // Provider taps → open the contract detail
+        AppRouter.router.go('/provider?contractId=$targetId');
+        break;
     }
   }
 

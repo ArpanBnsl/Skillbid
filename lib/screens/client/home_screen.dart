@@ -438,9 +438,7 @@ class _StatTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: 100,
-      child: Container(
+    return Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
         decoration: BoxDecoration(
           color: AppColors.surfaceLight,
@@ -460,7 +458,7 @@ class _StatTile extends StatelessWidget {
                 style: AppTypography.statValue.copyWith(color: AppColors.textPrimary),
               ),
             ),
-            const Spacer(),
+            const SizedBox(height: 6),
             Text(
               label,
               maxLines: 1,
@@ -469,7 +467,6 @@ class _StatTile extends StatelessWidget {
             ),
           ],
         ),
-      ),
     );
   }
 }

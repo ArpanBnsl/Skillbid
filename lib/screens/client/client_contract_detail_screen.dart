@@ -145,18 +145,54 @@ class _ClientContractDetailScreenState extends ConsumerState<ClientContractDetai
               ),
               const SizedBox(height: 10),
             ],
-            _ActionButton(
-              icon: _processing ? null : Icons.verified_outlined,
-              label: 'Mark Contract Completed',
-              gradient: AppColors.primaryGradient,
-              textColor: AppColors.textDark,
-              isLoading: _processing,
-              onPressed: (_processing || contract.workSubmittedAt == null)
-                  ? null
-                  : () => _completeContract(contract.id),
-            ),
-            if (contract.workSubmittedAt == null) ...[
-              const SizedBox(height: 6),
+            if (contract.workSubmittedAt != null) ...[
+              Text(
+                'Are you satisfied with the work?',
+                style: AppTypography.labelLarge.copyWith(color: AppColors.textPrimary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 10),
+              Row(
+                children: [
+                  Expanded(
+                    child: _ActionButton(
+                      icon: Icons.thumb_up_outlined,
+                      label: 'Satisfied',
+                      gradient: AppColors.primaryGradient,
+                      textColor: AppColors.textDark,
+                      onPressed: _processing
+                          ? null
+                          : () {
+                              final bid = ref.read(bidProvider(contract.bidId)).valueOrNull;
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => _PaymentScreen(
+                                    contractId: contract.id,
+                                    amount: bid?.amount,
+                                  ),
+                                ),
+                              );
+                            },
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: _ActionButton(
+                      icon: Icons.thumb_down_outlined,
+                      label: 'Unsatisfied',
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFFFF6B6B), Color(0xFFEE5A24)],
+                      ),
+                      textColor: AppColors.textPrimary,
+                      onPressed: _processing
+                          ? null
+                          : () => _confirmTerminate(contract.id),
+                    ),
+                  ),
+                ],
+              ),
+            ] else ...[
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 4),
                 child: Text(
@@ -201,25 +237,6 @@ class _ClientContractDetailScreenState extends ConsumerState<ClientContractDetai
         ],
       ),
     );
-  }
-
-  Future<void> _completeContract(String contractId) async {
-    setState(() => _processing = true);
-    try {
-      await ref.read(completeContractProvider(contractId).future);
-      ref.invalidate(contractProvider(contractId));
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Contract marked as completed.')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to complete contract: $e')),
-      );
-    } finally {
-      if (mounted) setState(() => _processing = false);
-    }
   }
 
   Future<void> _confirmTerminate(String contractId) async {
@@ -497,6 +514,325 @@ class _StatusPill extends StatelessWidget {
       child: Text(
         label,
         style: AppTypography.labelSmall.copyWith(color: foreground),
+      ),
+    );
+  }
+}
+
+class _PaymentScreen extends StatelessWidget {
+  final String contractId;
+  final double? amount;
+
+  const _PaymentScreen({required this.contractId, this.amount});
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
+        title: Text('Make Payment', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (amount != null) ...[
+                Text(
+                  'Amount to Pay',
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '₹${amount!.toStringAsFixed(0)}',
+                  style: AppTypography.heading2.copyWith(color: AppColors.primaryColor),
+                ),
+                const SizedBox(height: 20),
+              ],
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: CustomPaint(
+                  size: const Size(220, 220),
+                  painter: _QrPainter(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Scan this QR code to make payment',
+                style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: MaterialButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => _FinalApprovalScreen(contractId: contractId),
+                        ),
+                      );
+                    },
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(Icons.check_circle_outline, color: AppColors.textDark),
+                        const SizedBox(width: 8),
+                        Text(
+                          'I Have Made the Payment',
+                          style: AppTypography.buttonText.copyWith(color: AppColors.textDark),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Draws a sample QR-code-like pattern.
+class _QrPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()..color = Colors.black;
+    final cellSize = size.width / 25;
+
+    // Fixed pseudo-random pattern seeded from a constant
+    const pattern = [
+      0x7F, 0x41, 0x5D, 0x5D, 0x5D, 0x41, 0x7F, 0x00, 0xAA,
+      0x41, 0x00, 0x55, 0x00, 0x55, 0x00, 0x41, 0x7F, 0x00,
+      0x5D, 0x00, 0x33, 0xCC, 0x33, 0x00, 0x5D,
+    ];
+
+    // Draw finder patterns (three corners)
+    void drawFinder(double x, double y) {
+      // Outer border
+      canvas.drawRect(Rect.fromLTWH(x, y, 7 * cellSize, 7 * cellSize), paint);
+      canvas.drawRect(
+        Rect.fromLTWH(x + cellSize, y + cellSize, 5 * cellSize, 5 * cellSize),
+        Paint()..color = Colors.white,
+      );
+      canvas.drawRect(
+        Rect.fromLTWH(x + 2 * cellSize, y + 2 * cellSize, 3 * cellSize, 3 * cellSize),
+        paint,
+      );
+    }
+
+    drawFinder(0, 0);
+    drawFinder((25 - 7) * cellSize, 0);
+    drawFinder(0, (25 - 7) * cellSize);
+
+    // Fill data area with pattern
+    for (var row = 0; row < 25; row++) {
+      for (var col = 0; col < 25; col++) {
+        // Skip finder pattern areas
+        if ((row < 8 && col < 8) || (row < 8 && col > 16) || (row > 16 && col < 8)) continue;
+
+        final idx = (row * 25 + col) % pattern.length;
+        final bit = (pattern[idx] >> (col % 8)) & 1;
+        if (bit == 1) {
+          canvas.drawRect(
+            Rect.fromLTWH(col * cellSize, row * cellSize, cellSize, cellSize),
+            paint,
+          );
+        }
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _FinalApprovalScreen extends ConsumerStatefulWidget {
+  final String contractId;
+
+  const _FinalApprovalScreen({required this.contractId});
+
+  @override
+  ConsumerState<_FinalApprovalScreen> createState() => _FinalApprovalScreenState();
+}
+
+class _FinalApprovalScreenState extends ConsumerState<_FinalApprovalScreen> {
+  bool _processing = false;
+  bool _completed = false;
+  String? _error;
+
+  Future<void> _approve() async {
+    setState(() {
+      _processing = true;
+      _error = null;
+    });
+    try {
+      await ref.read(completeContractProvider(widget.contractId).future);
+      ref.invalidate(contractProvider(widget.contractId));
+      if (!mounted) return;
+      setState(() {
+        _completed = true;
+        _processing = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = e.toString();
+        _processing = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_completed) {
+      return Scaffold(
+        backgroundColor: AppColors.surface,
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(32),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  width: 80,
+                  height: 80,
+                  decoration: const BoxDecoration(
+                    color: AppColors.successLight,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Icon(Icons.check_rounded, size: 44, color: AppColors.success),
+                ),
+                const SizedBox(height: 24),
+                Text(
+                  'Project Completed!',
+                  style: AppTypography.heading3.copyWith(color: AppColors.textPrimary),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Payment confirmed and the contract has been closed. The provider has been notified.',
+                  style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 32),
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: AppColors.primaryGradient,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: MaterialButton(
+                      onPressed: () {
+                        Navigator.of(context).pushAndRemoveUntil(
+                          MaterialPageRoute(builder: (_) => const ClientShell()),
+                          (route) => false,
+                        );
+                      },
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                      child: Text(
+                        'Go to Home',
+                        style: AppTypography.buttonText.copyWith(color: AppColors.textDark),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    return Scaffold(
+      backgroundColor: AppColors.surface,
+      appBar: AppBar(
+        backgroundColor: AppColors.surface,
+        foregroundColor: AppColors.textPrimary,
+        title: Text('Final Approval', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+      ),
+      body: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(32),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 80,
+                height: 80,
+                decoration: BoxDecoration(
+                  color: AppColors.infoLight,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(Icons.payment_outlined, size: 44, color: AppColors.info),
+              ),
+              const SizedBox(height: 24),
+              Text(
+                'Confirm & Approve',
+                style: AppTypography.heading3.copyWith(color: AppColors.textPrimary),
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'By approving, you confirm that the payment has been made and the work is satisfactory. This will close the contract.',
+                style: AppTypography.bodyMedium.copyWith(color: AppColors.textSecondary),
+                textAlign: TextAlign.center,
+              ),
+              if (_error != null) ...[
+                const SizedBox(height: 12),
+                Text(
+                  _error!,
+                  style: AppTypography.bodySmall.copyWith(color: AppColors.error),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+              const SizedBox(height: 32),
+              SizedBox(
+                width: double.infinity,
+                height: 48,
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: AppColors.primaryGradient,
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: MaterialButton(
+                    onPressed: _processing ? null : _approve,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+                    child: _processing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2, color: AppColors.textDark),
+                          )
+                        : Text(
+                            'Approve & Close Contract',
+                            style: AppTypography.buttonText.copyWith(color: AppColors.textDark),
+                          ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

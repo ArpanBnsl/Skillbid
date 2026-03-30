@@ -56,7 +56,7 @@ serve(async (req: Request) => {
           .filter((id: string) => id !== record.client_id);
 
         title = "New Project Available!";
-        body = `${record.title} — Budget: $${record.budget}`;
+        body = `${record.title} — Budget: ₹${record.budget}`;
         data = { type: "new_job", target_id: record.id };
         break;
       }
@@ -74,9 +74,67 @@ serve(async (req: Request) => {
         if (job) {
           recipientUserIds = [job.client_id];
           title = "New Bid Received!";
-          body = `Someone bid $${record.amount} on "${job.title}"`;
+          body = `Someone bid ₹${record.amount} on "${job.title}"`;
           data = { type: "new_bid", target_id: record.job_id };
         }
+        break;
+      }
+
+      // -----------------------------------------------------------------
+      // BID ACCEPTED — notify the provider
+      // -----------------------------------------------------------------
+      case "bid_accepted": {
+        recipientUserIds = [record.provider_id];
+
+        const { data: job2 } = await supabaseAdmin
+          .from("jobs")
+          .select("title")
+          .eq("id", record.job_id)
+          .single();
+
+        title = "Bid Accepted!";
+        body = `Your bid on "${job2?.title ?? "a project"}" has been accepted. You have a new contract!`;
+        data = { type: "bid_accepted", target_id: record.id };
+        break;
+      }
+
+      // -----------------------------------------------------------------
+      // CONTRACT TERMINATED — notify the provider
+      // -----------------------------------------------------------------
+      case "contract_terminated": {
+        recipientUserIds = [record.provider_id];
+
+        const { data: tjob } = await supabaseAdmin
+          .from("jobs")
+          .select("title")
+          .eq("id", record.job_id)
+          .single();
+
+        title = "Contract Cancelled";
+        body = `The client has cancelled the contract for "${tjob?.title ?? "a project"}".`;
+        data = { type: "contract_terminated", target_id: record.id };
+        break;
+      }
+
+      // -----------------------------------------------------------------
+      // WORK SUBMITTED — notify the client
+      // -----------------------------------------------------------------
+      case "work_submitted": {
+        recipientUserIds = [record.client_id];
+        title = "Work Submitted for Approval";
+        body = "A provider has submitted their work on your contract. Review it now.";
+        data = { type: "work_submitted", target_id: record.id };
+        break;
+      }
+
+      // -----------------------------------------------------------------
+      // WORK APPROVED — notify the provider
+      // -----------------------------------------------------------------
+      case "work_approved": {
+        recipientUserIds = [record.provider_id];
+        title = "Work Approved!";
+        body = "The client has approved your work. The contract is now complete!";
+        data = { type: "work_approved", target_id: record.id };
         break;
       }
 
