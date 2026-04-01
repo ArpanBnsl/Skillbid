@@ -691,6 +691,8 @@ class _FinalApprovalScreenState extends ConsumerState<_FinalApprovalScreen> {
         _completed = true;
         _processing = false;
       });
+      // Show the review dialog right after completion
+      _showReviewDialog();
     } catch (e) {
       if (!mounted) return;
       setState(() {
@@ -698,6 +700,96 @@ class _FinalApprovalScreenState extends ConsumerState<_FinalApprovalScreen> {
         _processing = false;
       });
     }
+  }
+
+  Future<void> _showReviewDialog() async {
+    final reviewController = TextEditingController();
+    var selectedRating = 5;
+
+    final submitted = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setDialogState) => AlertDialog(
+          backgroundColor: AppColors.surfaceLight,
+          title: Text('Rate This Provider', style: AppTypography.heading4.copyWith(color: AppColors.textPrimary)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'How was your experience?',
+                style: AppTypography.bodySmall.copyWith(color: AppColors.textSecondary),
+              ),
+              const SizedBox(height: 8),
+              Wrap(
+                spacing: 4,
+                children: List.generate(5, (index) {
+                  final star = index + 1;
+                  return IconButton(
+                    onPressed: () => setDialogState(() => selectedRating = star),
+                    icon: Icon(
+                      star <= selectedRating ? Icons.star : Icons.star_border,
+                      color: AppColors.warning,
+                    ),
+                  );
+                }),
+              ),
+              TextField(
+                controller: reviewController,
+                maxLines: 4,
+                style: const TextStyle(color: AppColors.textPrimary),
+                decoration: const InputDecoration(
+                  labelText: 'Review',
+                  hintText: 'Share how the work went',
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: Text('Skip', style: TextStyle(color: AppColors.textSecondary)),
+            ),
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: AppColors.primaryColor,
+                foregroundColor: AppColors.textDark,
+              ),
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Submit'),
+            ),
+          ],
+        ),
+      ),
+    );
+
+    if (submitted == true && mounted) {
+      try {
+        await ref.read(
+          addReviewProvider(
+            (
+              contractId: widget.contractId,
+              rating: selectedRating,
+              reviewText: reviewController.text.trim(),
+            ),
+          ).future,
+        );
+        ref.invalidate(contractProvider(widget.contractId));
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Review added successfully.')),
+          );
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Unable to add review: $e')),
+          );
+        }
+      }
+    }
+    reviewController.dispose();
   }
 
   @override

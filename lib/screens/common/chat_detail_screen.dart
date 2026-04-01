@@ -100,27 +100,6 @@ class _ChatDetailScreenState extends ConsumerState<ChatDetailScreen> {
       ),
       body: Column(
         children: [
-          // Header bar
-          chatOverviewAsync.when(
-            data: (chat) {
-              if (chat == null) return const SizedBox.shrink();
-              final projectTitle = chat.jobTitle ?? 'Contract Chat';
-              final otherParticipant = chat.otherUserName.trim().isEmpty
-                  ? 'Participant'
-                  : chat.otherUserName;
-              return Container(
-                width: double.infinity,
-                padding: const EdgeInsets.fromLTRB(16, 10, 16, 10),
-                color: AppColors.surfaceVariant,
-                child: Text(
-                  '$projectTitle | $otherParticipant',
-                  style: AppTypography.labelMedium.copyWith(color: AppColors.textSecondary),
-                ),
-              );
-            },
-            loading: () => const SizedBox.shrink(),
-            error: (_, __) => const SizedBox.shrink(),
-          ),
           // Closed notice
           if (isClosed)
             Container(
